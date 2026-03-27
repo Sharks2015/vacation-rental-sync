@@ -13,6 +13,7 @@ from config import settings
 from models.booking import Booking
 from models.cleaning_task import CleaningTask
 from models.property import Property
+from utils.date_helpers import normalize_time
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -36,21 +37,34 @@ def get_all_properties() -> List[Property]:
     props = []
     for r in records:
         f = r["fields"]
-        if not f.get("Active", True):
+        # Skip empty records (e.g. created by Make.com test runs)
+        if not f:
+            continue
+        # Active field may be a checkbox (True/False) or text ("Checked")
+        active_val = f.get("Active", f.get("Active ", True))
+        if isinstance(active_val, str):
+            active_val = active_val.strip().lower() in ("checked", "true", "yes", "1")
+        if active_val is False:
             continue
         try:
+            # Handle slight field name variations
+            ical_url = f.get("iCal URL") or f.get("ical URL") or f.get("Ical URL", "")
+            cleaning_fee = float(f.get("Cleaning Fee") or f.get("CleaningFee") or 0)
+            lodgify_id = f.get("Lodgify Property ID", "")
             props.append(
                 Property(
                     airtable_id=r["id"],
                     name=f["Name"],
                     address=f.get("Address", ""),
-                    ical_url=f["iCal URL"],
+                    ical_url=ical_url,
+                    lodgify_property_id=str(lodgify_id) if lodgify_id else "",
+                    secondary_ical_url=f.get("Secondary iCal URL", ""),
                     cleaner_name=f.get("Cleaner Name", ""),
                     cleaner_phone=f.get("Cleaner Phone", ""),
-                    cleaning_fee=float(f.get("Cleaning Fee", 0)),
+                    cleaning_fee=cleaning_fee,
                     turnover_time_hours=float(f.get("Turnover Time Hours", 3)),
                     google_calendar_id=f.get("Google Calendar ID", ""),
-                    active=f.get("Active", True),
+                    active=True,
                     default_checkout_time=f.get("Default Checkout Time", "11:00"),
                     default_checkin_time=f.get("Default Checkin Time", "16:00"),
                 )
@@ -74,7 +88,6 @@ def _booking_to_fields(b: Booking) -> dict:
         "Check-out Date": b.checkout.isoformat(),
         "Status": b.status,
         "Raw iCal Summary": b.raw_summary,
-        "Last Synced At": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -98,9 +111,13 @@ def _fields_to_booking(r: dict) -> Booking:
 def get_bookings_for_property(property_airtable_id: str) -> List[Booking]:
     api = _get_api()
     table = api.table(settings.AIRTABLE_BASE_ID, settings.AIRTABLE_BOOKINGS_TABLE)
-    formula = f"FIND('{property_airtable_id}', ARRAYJOIN({{Property}}))"
-    records = table.all(formula=formula)
-    return [_fields_to_booking(r) for r in records]
+    # Airtable FIND/ARRAYJOIN doesn't work on linked record fields (returns display
+    # name, not record ID). Filter client-side instead.
+    records = table.all()
+    return [
+        _fields_to_booking(r) for r in records
+        if property_airtable_id in (r["fields"].get("Property") or [])
+    ]
 
 
 def upsert_booking(booking: Booking) -> Booking:
@@ -129,17 +146,17 @@ def _task_to_fields(t: CleaningTask) -> dict:
         "Booking": [t.booking_airtable_id] if t.booking_airtable_id else [],
         "Booking UID": t.booking_uid,
         "Cleaning Date": t.cleaning_date.isoformat(),
-        "Cleaning Start Time": t.cleaning_start_time,
-        "Cleaning End Time": t.cleaning_end_time,
+        "Cleaning Start Time": normalize_time(t.cleaning_start_time),
+        "Cleaning End Time": normalize_time(t.cleaning_end_time),
         "Cleaner": t.cleaner_name,
         "Cleaner Phone": t.cleaner_phone,
         "Cleaning Fee": t.cleaning_fee,
-        "Is Same-Day Turnover": t.is_same_day_turnover,
+        "Is Same Day Turnover?": t.is_same_day_turnover,
         "Status": t.status,
         "Notified": t.notified,
     }
     if t.next_checkin_date:
-        fields["Next Check-in Date"] = t.next_checkin_date.isoformat()
+        fields["Next Check In Date"] = t.next_checkin_date.isoformat()
     if t.next_guest_name:
         fields["Next Guest Name"] = t.next_guest_name
     if t.google_calendar_event_id:

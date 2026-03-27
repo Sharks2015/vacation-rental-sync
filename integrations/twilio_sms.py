@@ -23,6 +23,9 @@ def _send(to: str, body: str) -> bool:
     if not to:
         logger.warning("No phone number to send SMS to — skipping")
         return False
+    if not settings.TWILIO_ACCOUNT_SID or settings.TWILIO_ACCOUNT_SID == "placeholder":
+        logger.info("Twilio not configured — skipping SMS to %s: %s", to, body)
+        return False
     try:
         client = _get_client()
         message = client.messages.create(

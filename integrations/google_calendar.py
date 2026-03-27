@@ -79,8 +79,8 @@ def sync_task(task: CleaningTask, prop: Property, airtable_update_fn) -> Cleanin
     Create, update, or delete a Google Calendar event for a cleaning task.
     Calls airtable_update_fn to persist the event ID back to Airtable.
     """
-    if not prop.google_calendar_id:
-        logger.warning("Property '%s' has no Google Calendar ID — skipping", prop.name)
+    if not prop.google_calendar_id or not settings.GOOGLE_SERVICE_ACCOUNT_FILE:
+        logger.info("Google Calendar not configured for '%s' — skipping", prop.name)
         return task
 
     service = _get_service()

@@ -16,3 +16,5 @@ class Property:
     active: bool = True
     default_checkout_time: str = "11:00"  # HH:MM, local time
     default_checkin_time: str = "16:00"   # HH:MM, used for same-day turnover deadline
+    lodgify_property_id: str = ""         # Set for Lodgify properties; blank for iCal/Airbnb
+    secondary_ical_url: str = ""          # Optional second iCal feed (e.g. VRBO + Airbnb on same property)

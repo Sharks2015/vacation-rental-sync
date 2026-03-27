@@ -13,6 +13,7 @@ from datetime import timedelta
 from config import settings
 from integrations import airtable_client as airtable
 from integrations import google_calendar
+from integrations import lodgify_client
 from integrations import twilio_sms
 from sync import ical_fetcher
 from sync.booking_sync import diff
@@ -31,8 +32,16 @@ logger = get_logger("main")
 def sync_property(prop):
     logger.info("=== Syncing property: %s ===", prop.name)
 
-    # Step 1: Fetch live bookings from iCal
-    fetched_bookings = ical_fetcher.fetch_and_parse(prop)
+    # Step 1: Fetch live bookings from Lodgify API or iCal
+    if prop.lodgify_property_id and settings.LODGIFY_API_KEY:
+        fetched_bookings = lodgify_client.get_bookings_for_property(
+            settings.LODGIFY_API_KEY,
+            int(prop.lodgify_property_id),
+            prop.airtable_id,
+            prop.name,
+        )
+    else:
+        fetched_bookings = ical_fetcher.fetch_and_parse(prop)
     if not fetched_bookings:
         logger.warning("No bookings fetched for '%s' — skipping", prop.name)
         return
@@ -134,6 +143,7 @@ def sync_property(prop):
 
 def main():
     logger.info("Starting vacation rental sync")
+    lodgify_client.reset_cache()  # Fresh fetch each sync run
     properties = airtable.get_all_properties()
 
     if not properties:

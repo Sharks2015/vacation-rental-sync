@@ -36,19 +36,19 @@ def _extract_guest_name(summary: str) -> str:
     return "Unknown Guest"
 
 
-def fetch_and_parse(prop: Property) -> List[Booking]:
-    """Fetch an iCal URL and return a list of Booking objects for that property."""
+def _parse_url(url: str, prop: Property) -> List[Booking]:
+    """Fetch and parse a single iCal URL into Booking objects."""
     try:
-        resp = requests.get(prop.ical_url, timeout=15)
+        resp = requests.get(url, timeout=15)
         resp.raise_for_status()
     except requests.RequestException as e:
-        logger.error("Failed to fetch iCal for '%s': %s", prop.name, e)
+        logger.error("Failed to fetch iCal for '%s' (%s): %s", prop.name, url, e)
         return []
 
     try:
         cal = Calendar.from_ical(resp.content)
     except Exception as e:
-        logger.error("Failed to parse iCal for '%s': %s", prop.name, e)
+        logger.error("Failed to parse iCal for '%s' (%s): %s", prop.name, url, e)
         return []
 
     bookings: List[Booking] = []
@@ -62,12 +62,20 @@ def fetch_and_parse(prop: Property) -> List[Booking]:
         dtstart = component.get("DTSTART")
         dtend = component.get("DTEND")
 
-        if not uid or not dtstart or not dtend:
+        if not dtstart or not dtend:
             logger.warning("Skipping malformed VEVENT in '%s': uid=%s", prop.name, uid)
             continue
 
         checkin: date = to_date(dtstart.dt)
         checkout: date = to_date(dtend.dt)
+
+        # Lodgify iCal generates a new random UUID on every export, so UIDs are
+        # not stable across fetches. Use a deterministic key instead.
+        if "lodgify.com" in url:
+            uid = f"{prop.airtable_id}:{checkin.isoformat()}:{checkout.isoformat()}"
+        elif not uid:
+            logger.warning("Skipping VEVENT with no UID in '%s'", prop.name)
+            continue
 
         if _BLOCK_RE.search(summary):
             status = "Blocked"
@@ -88,6 +96,22 @@ def fetch_and_parse(prop: Property) -> List[Booking]:
                 raw_summary=summary,
             )
         )
+
+    return bookings
+
+
+def fetch_and_parse(prop: Property) -> List[Booking]:
+    """Fetch all iCal URLs for a property and return merged, deduplicated bookings."""
+    bookings = _parse_url(prop.ical_url, prop)
+
+    if prop.secondary_ical_url:
+        secondary = _parse_url(prop.secondary_ical_url, prop)
+        # Merge: secondary bookings only added if their UID isn't already present
+        existing_uids = {b.uid for b in bookings}
+        for b in secondary:
+            if b.uid not in existing_uids:
+                bookings.append(b)
+                existing_uids.add(b.uid)
 
     logger.info("Fetched %d events for '%s'", len(bookings), prop.name)
     return bookings
