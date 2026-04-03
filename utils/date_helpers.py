@@ -9,8 +9,17 @@ def to_date(value: Union[date, datetime]) -> date:
     return value
 
 
-def normalize_time(t: str) -> str:
+def normalize_time(t: str, fallback: str = "12:00 PM") -> str:
     """Convert any time format (11am, 11:00, 4pm, 16:00) to 12-hour format (10:00 AM, 4:00 PM)."""
+    if not t or not isinstance(t, str):
+        return fallback
+    try:
+        return _normalize_time_inner(t)
+    except (ValueError, AttributeError):
+        return fallback
+
+
+def _normalize_time_inner(t: str) -> str:
     t = t.strip().lower().replace(" ", "")
     # Already in 12-hour format like "10:00 am" or "4:00 pm"
     if "am" in t or "pm" in t:
