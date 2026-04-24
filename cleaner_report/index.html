@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Paradise Shine - Reporte</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1a2744">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Paradise Shine">
+  <link rel="apple-touch-icon" href="/icon-apple.png">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f6fa;
+      color: #1a1a1a;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1a2744, #0f1c35);
+      color: white;
+      padding: 14px 20px 12px;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.28);
+    }
+    header img { height: 58px; width: auto; object-fit: contain; }
+    header p   { font-size: 12px; color: #f4a83a; font-weight: 600;
+                 letter-spacing: 1.2px; text-transform: uppercase; margin-top: 4px; }
+
+    .container { padding: 16px; max-width: 520px; margin: 0 auto; }
+
+    .card {
+      background: white;
+      border-radius: 18px;
+      padding: 20px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    }
+    .card-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #f4a83a;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    input[type="text"], input[type="tel"], textarea, select {
+      width: 100%;
+      padding: 13px 14px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 12px;
+      font-size: 16px;
+      background: #fafafa;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+      transition: border-color 0.15s;
+      color: #1a1a1a;
+      font-family: inherit;
+    }
+    input:focus, textarea:focus {
+      border-color: #1a2744;
+      background: white;
+    }
+    textarea { min-height: 90px; resize: vertical; line-height: 1.5; }
+    .field-gap { height: 14px; }
+
+    /* ── PIN SCREEN ───────────────────────────────────────────── */
+    #pin-view {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100vh - 70px);
+      padding: 32px 24px;
+      text-align: center;
+    }
+    .pin-logo { font-size: 56px; margin-bottom: 12px; }
+    #pin-view h2 { font-size: 22px; font-weight: 800; color: #0f1c35; margin-bottom: 6px; }
+    #pin-view p  { font-size: 14px; color: #6b7280; margin-bottom: 28px; }
+
+    .pin-dots {
+      display: flex;
+      gap: 14px;
+      margin-bottom: 28px;
+      justify-content: center;
+    }
+    .pin-dot {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: #e5e7eb;
+      transition: background 0.15s, transform 0.15s;
+    }
+    .pin-dot.filled { background: #f4a83a; transform: scale(1.15); }
+
+    .pin-keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 72px);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .pin-key {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      border: none;
+      background: white;
+      font-size: 24px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+      display: flex; align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      transition: transform 0.1s, background 0.1s;
+      color: #1a1a1a;
+    }
+    .pin-key:active   { transform: scale(0.92); background: #eef1f8; }
+    .pin-key.zero     { grid-column: 2; }
+    .pin-key.del      { background: #fef2f2; font-size: 20px; }
+    .pin-key.del:active { background: #fee2e2; }
+
+    .pin-error {
+      color: #dc2626;
+      font-size: 14px;
+      font-weight: 600;
+      min-height: 20px;
+      margin-top: -8px;
+    }
+
+    /* ── FORM VIEW ────────────────────────────────────────────── */
+    #form-view { display: none; }
+
+    .cleaner-badge {
+      background: #eef1f8;
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .cleaner-badge span { font-size: 15px; font-weight: 700; color: #0f1c35; }
+    .logout-btn {
+      margin-left: auto;
+      background: none;
+      border: 1.5px solid #1a2744;
+      color: #1a2744;
+      border-radius: 8px;
+      padding: 5px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* Supply items */
+    #supplies-list { margin: -4px 0; }
+    .no-property { text-align: center; color: #9ca3af; padding: 16px 0 4px; font-size: 15px; }
+
+    .supply-item {
+      display: flex;
+      align-items: center;
+      padding: 11px 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .supply-item:last-child { border-bottom: none; }
+    .supply-emoji { font-size: 26px; margin-right: 13px; flex-shrink: 0; line-height: 1; }
+    .supply-name  { flex: 1; font-size: 15px; font-weight: 500; line-height: 1.3; }
+
+    .qty-control {
+      display: flex; align-items: center; gap: 12px;
+      flex-shrink: 0; margin-left: 10px;
+    }
+    .qty-btn {
+      width: 36px; height: 36px;
+      border-radius: 50%; border: none;
+      font-size: 22px; line-height: 1;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation; user-select: none;
+      transition: transform 0.1s;
+    }
+    .qty-btn:active  { transform: scale(0.90); }
+    .qty-btn.plus    { background: #1a2744; color: white; }
+    .qty-btn.minus   { background: #e5e7eb; color: #374151; }
+    .qty-num         { font-size: 19px; font-weight: 700; min-width: 22px; text-align: center; }
+    .qty-num.zero    { color: #d1d5db; }
+
+    /* Submit */
+    .submit-btn {
+      width: 100%; padding: 17px;
+      background: linear-gradient(135deg, #f4a83a, #e08c1a);
+      color: white; border: none; border-radius: 16px;
+      font-size: 17px; font-weight: 700; cursor: pointer;
+      -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+      margin-top: 4px;
+      box-shadow: 0 4px 14px rgba(244,168,58,0.35);
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .submit-btn:active   { transform: scale(0.98); opacity: 0.92; }
+    .submit-btn:disabled { background: #9ca3af; box-shadow: none; cursor: default; }
+
+    /* Success */
+    #success-view {
+      display: none; text-align: center;
+      padding: 70px 28px;
+    }
+    .check-icon { font-size: 80px; animation: pop 0.4s ease; }
+    @keyframes pop {
+      0%   { transform: scale(0.5); opacity: 0; }
+      80%  { transform: scale(1.15); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    #success-view h2 { font-size: 26px; font-weight: 800; color: #1a2744; margin: 18px 0 10px; }
+    #success-view p  { color: #6b7280; font-size: 15px; line-height: 1.6; margin-bottom: 28px; }
+    .new-btn {
+      padding: 15px 32px; background: #f4a83a; color: white;
+      border: none; border-radius: 14px; font-size: 16px; font-weight: 700;
+      cursor: pointer; box-shadow: 0 4px 14px rgba(244,168,58,0.3);
+    }
+
+    /* Install banner */
+    #install-banner {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #1a2744;
+      color: white;
+      padding: 14px 18px;
+      z-index: 100;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.25);
+    }
+    #install-banner .banner-inner {
+      max-width: 520px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    #install-banner img  { height: 40px; width: 40px; border-radius: 10px; object-fit: cover; }
+    #install-banner .banner-text { flex: 1; }
+    #install-banner .banner-text strong { display: block; font-size: 14px; }
+    #install-banner .banner-text span   { font-size: 12px; opacity: 0.75; }
+    .install-btn {
+      background: #f4a83a; color: white; border: none;
+      border-radius: 10px; padding: 9px 16px;
+      font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;
+    }
+    .dismiss-btn {
+      background: none; border: none; color: rgba(255,255,255,0.5);
+      font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <img src="/logo.jpg" alt="Paradise Shine Cleaning">
+  <p id="header-sub">Reporte de Suministros y Daños</p>
+</header>
+
+<!-- ── PIN SCREEN ──────────────────────────────────────────────────── -->
+<div id="pin-view">
+  <div class="pin-logo">🔐</div>
+  <h2>Ingresa tu PIN</h2>
+  <p>Cada limpiador tiene su propio PIN personal</p>
+
+  <div class="pin-dots">
+    <div class="pin-dot" id="d0"></div>
+    <div class="pin-dot" id="d1"></div>
+    <div class="pin-dot" id="d2"></div>
+    <div class="pin-dot" id="d3"></div>
+  </div>
+
+  <div class="pin-keypad">
+    <button class="pin-key" onclick="pinPress('1')">1</button>
+    <button class="pin-key" onclick="pinPress('2')">2</button>
+    <button class="pin-key" onclick="pinPress('3')">3</button>
+    <button class="pin-key" onclick="pinPress('4')">4</button>
+    <button class="pin-key" onclick="pinPress('5')">5</button>
+    <button class="pin-key" onclick="pinPress('6')">6</button>
+    <button class="pin-key" onclick="pinPress('7')">7</button>
+    <button class="pin-key" onclick="pinPress('8')">8</button>
+    <button class="pin-key" onclick="pinPress('9')">9</button>
+    <button class="pin-key zero" onclick="pinPress('0')">0</button>
+    <button class="pin-key del"  onclick="pinDel()">⌫</button>
+  </div>
+
+  <p class="pin-error" id="pin-error"></p>
+</div>
+
+<!-- ── FORM VIEW ───────────────────────────────────────────────────── -->
+<div id="form-view">
+  <div class="container">
+
+    <!-- Cleaner badge -->
+    <div class="cleaner-badge">
+      <span>👋 Hola, <span id="cleaner-display-name"></span></span>
+      <button class="logout-btn" onclick="logout()">Salir</button>
+    </div>
+
+    <!-- Property selector -->
+    <div class="card">
+      <div class="card-title">📍 Propiedad</div>
+      <select id="property-select">
+        <option value="">— Selecciona la propiedad —</option>
+      </select>
+    </div>
+
+    <!-- Supplies -->
+    <div class="card">
+      <div class="card-title">📦 Suministros Necesarios</div>
+      <div id="supplies-list">
+        <p class="no-property">Selecciona una propiedad primero</p>
+      </div>
+    </div>
+
+    <!-- Damages -->
+    <div class="card">
+      <div class="card-title">⚠️ Daños / Notas</div>
+      <textarea id="damage-notes" placeholder="Describe cualquier daño, artículo roto o nota importante..."></textarea>
+    </div>
+
+    <button class="submit-btn" id="submit-btn" onclick="submitReport()">
+      Enviar Reporte ✅
+    </button>
+    <div style="height:28px"></div>
+
+  </div>
+</div>
+
+<!-- ── INSTALL BANNER ──────────────────────────────────────────────── -->
+<div id="install-banner">
+  <div class="banner-inner">
+    <img src="/icon-apple.png" alt="icon">
+    <div class="banner-text">
+      <strong>Instalar Paradise Shine</strong>
+      <span>Agregar a tu pantalla de inicio</span>
+    </div>
+    <button class="install-btn" id="install-btn">Instalar</button>
+    <button class="dismiss-btn" onclick="dismissBanner()">✕</button>
+  </div>
+</div>
+
+<!-- ── SUCCESS VIEW ────────────────────────────────────────────────── -->
+<div id="success-view">
+  <div class="check-icon">✅</div>
+  <h2>¡Reporte Enviado!</h2>
+  <p>El reporte fue enviado exitosamente.<br>El cliente será notificado por mensaje de texto.</p>
+  <button class="new-btn" onclick="resetForm()">➕ Nuevo Reporte</button>
+</div>
+
+<script>
+const GHL_WEBHOOK_URL = "https://services.leadconnectorhq.com/hooks/rThu0gTECSkUU9WybMZx/webhook-trigger/e62d4643-adde-4abd-beb1-dc42685fbdce";
+
+// ── Supply master list ────────────────────────────────────────────────
+const SUPPLIES = {
+  toilet_paper:        { emoji: "🧻", name: "Papel de baño" },
+  paper_towels:        { emoji: "🧻", name: "Toallas de papel" },
+  sponge:              { emoji: "🧽", name: "Esponja" },
+  dish_soap:           { emoji: "🍽️",  name: "Jabón de platos" },
+  hand_soap:           { emoji: "🧴", name: "Jabón de manos" },
+  laundry_pods:        { emoji: "🫧", name: "Pods de lavandería" },
+  detergent:           { emoji: "🧺", name: "Detergente" },
+  dish_pods:           { emoji: "💧", name: "Pods de lavavajillas" },
+  bleach:              { emoji: "🧪", name: "Cloro" },
+  shampoo:             { emoji: "🧴", name: "Shampoo" },
+  shampoo_refill:      { emoji: "🧴", name: "Shampoo (relleno)" },
+  conditioner:         { emoji: "💆", name: "Acondicionador" },
+  conditioner_refill:  { emoji: "💆", name: "Acondicionador (relleno)" },
+  body_wash:           { emoji: "🚿", name: "Gel de baño" },
+  body_wash_refill:    { emoji: "🚿", name: "Gel de baño (relleno)" },
+  soap_bars:           { emoji: "🧼", name: "Jabón en barra" },
+  trash_kitchen:       { emoji: "🗑️",  name: "Bolsas de basura (cocina)" },
+  trash_bathroom:      { emoji: "🗑️",  name: "Bolsas de basura (baño)" },
+  snacks:              { emoji: "🍫", name: "Snacks" },
+  waters:              { emoji: "💧", name: "Aguas" },
+  toothbrushes:        { emoji: "🪥", name: "Cepillos de dientes" },
+  razors:              { emoji: "🪒", name: "Rastrillos" },
+  cotton_swabs:        { emoji: "🩹", name: "Hisopos de algodón" },
+  hand_wipes:          { emoji: "🧻", name: "Toallitas húmedas" },
+  mouthwash:           { emoji: "🫁", name: "Enjuague bucal" },
+  toilet_bands:        { emoji: "🚽", name: "Tiras sanitizantes de inodoro" },
+  stain_remover:       { emoji: "🧺", name: "Quitamanchas" },
+  shampoo_bottles:     { emoji: "🧴", name: "Botellas de shampoo" },
+  conditioner_bottles: { emoji: "🧴", name: "Botellas de acondicionador" },
+  body_wash_bottles:   { emoji: "🧴", name: "Botellas de gel de baño" },
+  soap_bottles:        { emoji: "🧼", name: "Botellas redondas de jabón" },
+  lotion_bottles:      { emoji: "🧴", name: "Botellas de loción" },
+  toiletry_bags:       { emoji: "👜", name: "Bolsas de artículos de tocador" },
+};
+
+// ── Supply sets per client ────────────────────────────────────────────
+const STANDARD = ["toilet_paper","paper_towels","sponge","dish_soap","hand_soap",
+                  "laundry_pods","dish_pods","soap_bars","shampoo","conditioner",
+                  "body_wash","trash_kitchen","trash_bathroom"];
+
+const STANDARD_REFILL = ["toilet_paper","paper_towels","sponge","dish_soap","hand_soap",
+                         "laundry_pods","detergent","dish_pods","bleach",
+                         "shampoo_refill","conditioner_refill","body_wash_refill",
+                         "trash_kitchen","trash_bathroom"];
+
+const LAPIERRE = ["toilet_paper","paper_towels","sponge","dish_soap","hand_soap",
+                  "laundry_pods","detergent","dish_pods","bleach",
+                  "shampoo_refill","conditioner_refill","body_wash_refill",
+                  "snacks","waters","trash_kitchen","trash_bathroom"];
+
+const TDANNA = ["toilet_paper","toothbrushes","razors","cotton_swabs","hand_wipes",
+                "mouthwash","toilet_bands","laundry_pods","detergent","bleach",
+                "stain_remover","shampoo_bottles","conditioner_bottles",
+                "body_wash_bottles","soap_bottles","lotion_bottles","toiletry_bags",
+                "trash_kitchen","trash_bathroom","sponge","dish_soap","hand_soap",
+                "paper_towels","dish_pods"];
+
+// ── Property → supply list ────────────────────────────────────────────
+const PROPERTY_SUPPLIES = {
+  "101 Newcastle Main House":             STANDARD,
+  "101 Newcastle Guest House":            STANDARD,
+  "106 SE 10th Ct Deerfield Beach":       LAPIERRE,
+  "1321 SE 2nd St Pompano Beach":         LAPIERRE,
+  "21 SE 9th St Pompano Beach":           LAPIERRE,
+  "258 Avalon Ave Lauderdale-By-The-Sea": LAPIERRE,
+  "2201 NE 19th Ave Wilton Manors":       LAPIERRE,
+  "2374 NE 8th Ct Pompano Beach":         LAPIERRE,
+  "4550 NE 3rd Ave Oakland Park":         LAPIERRE,
+  "931 SE 5th Ave Pompano Beach":         LAPIERRE,
+  "426 Lucky Ln Delray Beach":            STANDARD_REFILL,
+  "511 S K St Lake Worth":                STANDARD_REFILL,
+  "951 Selkirk Cottage 1/1":              STANDARD_REFILL,
+  "951 Selkirk Main House 2/1":           STANDARD_REFILL,
+  "1445 Cindy Dr Lake Worth":             STANDARD_REFILL,
+  "3540 NE 28th Ave Lighthouse Point":    STANDARD_REFILL,
+  "419 26th St West Palm Beach":          STANDARD_REFILL,
+  "938 Flamango Lake Dr West Palm Beach": STANDARD_REFILL,
+  "2624 SW 6th St Boynton Beach":         STANDARD_REFILL,
+  "125 NW 3rd Ave Delray Beach":          STANDARD_REFILL,
+  "126 NW 6th Ave Delray Beach":          TDANNA,
+  "735 NW 35th St Oakland Park":          TDANNA,
+  "913 SE 16th Deerfield Beach":          TDANNA,
+  "1241 SW 27th Ave Boynton Beach":       TDANNA,
+  "2231 NE 38th St Lighthouse Point":     TDANNA,
+  "3002 Dunlin Rd Delray Beach":          TDANNA,
+};
+
+// ── State ─────────────────────────────────────────────────────────────
+let pinBuffer     = "";
+let cleanerName   = "";
+let assignedProps = [];
+let quantities    = {};
+
+// ── PIN logic ─────────────────────────────────────────────────────────
+function pinPress(digit) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += digit;
+  updateDots();
+  if (pinBuffer.length === 4) verifyPin();
+}
+
+function pinDel() {
+  pinBuffer = pinBuffer.slice(0, -1);
+  document.getElementById("pin-error").textContent = "";
+  updateDots();
+}
+
+function updateDots() {
+  for (let i = 0; i < 4; i++) {
+    document.getElementById("d" + i).classList.toggle("filled", i < pinBuffer.length);
+  }
+}
+
+async function verifyPin() {
+  document.getElementById("pin-error").textContent = "";
+  try {
+    const res = await fetch("/verify-pin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin: pinBuffer }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      document.getElementById("pin-error").textContent = data.error || "PIN incorrecto";
+      pinBuffer = "";
+      updateDots();
+      return;
+    }
+
+    cleanerName   = data.name;
+    assignedProps = data.properties;
+    enterApp();
+
+  } catch {
+    document.getElementById("pin-error").textContent = "Error de conexión. Intenta de nuevo.";
+    pinBuffer = "";
+    updateDots();
+  }
+}
+
+function enterApp() {
+  document.getElementById("pin-view").style.display  = "none";
+  document.getElementById("form-view").style.display = "block";
+  document.getElementById("cleaner-display-name").textContent = cleanerName;
+
+  // Populate property dropdown with only assigned properties
+  const sel = document.getElementById("property-select");
+  while (sel.options.length > 1) sel.remove(1);
+  [...assignedProps].sort().forEach(name => {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+}
+
+function logout() {
+  pinBuffer = ""; cleanerName = ""; assignedProps = []; quantities = {};
+  updateDots();
+  document.getElementById("pin-error").textContent = "";
+  document.getElementById("form-view").style.display   = "none";
+  document.getElementById("success-view").style.display = "none";
+  document.getElementById("pin-view").style.display    = "flex";
+  document.getElementById("supplies-list").innerHTML   = '<p class="no-property">Selecciona una propiedad primero</p>';
+  document.getElementById("property-select").value     = "";
+  document.getElementById("damage-notes").value        = "";
+}
+
+// ── Property select ───────────────────────────────────────────────────
+document.getElementById("property-select").addEventListener("change", function () {
+  quantities = {};
+  renderSupplies(this.value);
+});
+
+function renderSupplies(propName) {
+  const list = document.getElementById("supplies-list");
+  const keys = PROPERTY_SUPPLIES[propName];
+  if (!propName || !keys) {
+    list.innerHTML = '<p class="no-property">Selecciona una propiedad primero</p>';
+    return;
+  }
+  list.innerHTML = "";
+  keys.forEach(key => {
+    const s = SUPPLIES[key];
+    if (!s) return;
+    quantities[key] = 0;
+    const div = document.createElement("div");
+    div.className = "supply-item";
+    div.innerHTML = `
+      <span class="supply-emoji">${s.emoji}</span>
+      <span class="supply-name">${s.name}</span>
+      <div class="qty-control">
+        <button class="qty-btn minus" ontouchstart="" onclick="changeQty('${key}',-1)">−</button>
+        <span class="qty-num zero" id="qty-${key}">0</span>
+        <button class="qty-btn plus"  ontouchstart="" onclick="changeQty('${key}', 1)">+</button>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+function changeQty(key, delta) {
+  quantities[key] = Math.max(0, (quantities[key] || 0) + delta);
+  const el = document.getElementById("qty-" + key);
+  el.textContent = quantities[key];
+  el.className = "qty-num" + (quantities[key] === 0 ? " zero" : "");
+}
+
+// ── Submit ────────────────────────────────────────────────────────────
+async function submitReport() {
+  const property = document.getElementById("property-select").value;
+  const notes    = document.getElementById("damage-notes").value.trim();
+
+  if (!property) { alert("Por favor selecciona una propiedad."); return; }
+
+  const lines = Object.entries(quantities)
+    .filter(([, v]) => v > 0)
+    .map(([k, v]) => `${SUPPLIES[k].emoji} ${SUPPLIES[k].name}: ${v}`);
+
+  if (!lines.length && !notes) {
+    alert("Agrega suministros necesarios o una nota antes de enviar.");
+    return;
+  }
+
+  const payload = {
+    property,
+    cleaner:         cleanerName,
+    supplies_needed: lines.length ? lines.join("\n") : "Ninguno",
+    damages_notes:   notes || "Ninguno",
+    submitted_at:    new Date().toLocaleString("es-US", { timeZone: "America/New_York" }),
+  };
+
+  const btn = document.getElementById("submit-btn");
+  btn.disabled = true;
+  btn.textContent = "Enviando…";
+
+  try {
+    await fetch(GHL_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      mode: "no-cors",
+    });
+    showSuccess();
+  } catch {
+    alert("Error al enviar. Verifica tu conexión e intenta de nuevo.");
+    btn.disabled = false;
+    btn.textContent = "Enviar Reporte ✅";
+  }
+}
+
+function showSuccess() {
+  document.getElementById("form-view").style.display   = "none";
+  document.getElementById("success-view").style.display = "block";
+  window.scrollTo(0, 0);
+}
+
+function resetForm() {
+  document.getElementById("property-select").value  = "";
+  document.getElementById("damage-notes").value     = "";
+  document.getElementById("supplies-list").innerHTML = '<p class="no-property">Selecciona una propiedad primero</p>';
+  quantities = {};
+  const btn = document.getElementById("submit-btn");
+  btn.disabled    = false;
+  btn.textContent = "Enviar Reporte ✅";
+  document.getElementById("success-view").style.display = "none";
+  document.getElementById("form-view").style.display    = "block";
+  window.scrollTo(0, 0);
+}
+</script>
+
+<script>
+// ── PWA: Service Worker + Install Prompt ──────────────────────────────
+let deferredPrompt = null;
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
+}
+
+// Chrome/Android: catch the install prompt
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Only show if not already installed and not dismissed before
+  if (!localStorage.getItem("pwa-dismissed")) {
+    document.getElementById("install-banner").style.display = "block";
+  }
+});
+
+document.getElementById("install-btn").addEventListener("click", async () => {
+  if (!deferredPrompt) {
+    // iOS fallback — show manual instructions
+    alert('En iPhone:\n1. Toca el botón de compartir (□↑) en Safari\n2. Desplázate y toca "Agregar a pantalla de inicio"\n3. Toca "Agregar"');
+    return;
+  }
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome === "accepted") dismissBanner();
+  deferredPrompt = null;
+});
+
+function dismissBanner() {
+  document.getElementById("install-banner").style.display = "none";
+  localStorage.setItem("pwa-dismissed", "1");
+}
+
+// On iOS show the banner manually (no beforeinstallprompt event)
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isInStandaloneMode = window.matchMedia("(display-mode: standalone)").matches;
+if (isIOS && !isInStandaloneMode && !localStorage.getItem("pwa-dismissed")) {
+  setTimeout(() => {
+    document.getElementById("install-banner").style.display = "block";
+  }, 3000);
+}
+</script>
+</body>
+</html>
