@@ -369,7 +369,6 @@
 </div>
 
 <script>
-const GHL_WEBHOOK_URL = "https://services.leadconnectorhq.com/hooks/rThu0gTECSkUU9WybMZx/webhook-trigger/0e8024e5-cd19-4ac9-bed9-ffcd27fcc3c2";
 
 // ── Supply master list ────────────────────────────────────────────────
 const SUPPLIES = {
@@ -610,12 +609,12 @@ async function submitReport() {
   btn.textContent = "Enviando…";
 
   try {
-    await fetch(GHL_WEBHOOK_URL, {
+    const res = await fetch("/submit-report", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-      mode: "no-cors",
     });
+    if (!res.ok) throw new Error("server error");
     showSuccess();
   } catch {
     alert("Error al enviar. Verifica tu conexión e intenta de nuevo.");
