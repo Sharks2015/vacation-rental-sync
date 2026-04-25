@@ -44,7 +44,7 @@ def verify_pin():
 
     cleaners = api.table(AIRTABLE_BASE_ID, "Cleaners").all()
     match = next(
-        (r for r in cleaners if str(r["fields"].get("PIN", "")) == pin),
+        (r for r in cleaners if str(r["fields"].get("Pin", r["fields"].get("PIN", ""))) == pin),
         None,
     )
 
@@ -60,7 +60,7 @@ def verify_pin():
         lookup = {p["id"]: p["fields"].get("Name", "") for p in all_props}
         prop_names = [lookup[pid] for pid in prop_ids if pid in lookup]
 
-    return jsonify({"name": f.get("Name", ""), "properties": prop_names})
+    return jsonify({"name": f.get("Name", "").strip(), "properties": prop_names})
 
 
 if __name__ == "__main__":
