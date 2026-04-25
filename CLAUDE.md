@@ -82,7 +82,7 @@ Three tables in one base:
 
 ## Airtable Field Names (exact strings used in API calls)
 
-Properties table: `Name`, `Address`, `iCal URL`, `Cleaner Name`, `Cleaner Phone`, `Cleaning Fee`, `Turnover Time Hours`, `Google Calendar ID`, `Active`, `Default Checkout Time`, `Default Checkin Time`
+Properties table: `Name`, `Address`, `iCal URL`, `Cleaner Name`, `Cleaner Phone`, `Cleaning Fee`, `Turnover Time Hours`, `Google Calendar ID`, `Active`, `Default Checkout Time`, `Default Checkin Time`, `Property Manager Email`, `Property Manager Phone`
 
 Bookings table: `Booking UID`, `Property`, `Guest Name`, `Check-in Date`, `Check-out Date`, `Status`, `Raw iCal Summary`, `Last Synced At`
 
