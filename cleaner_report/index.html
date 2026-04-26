@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0D9488">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Shine Clean">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-apple.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <title>Paradise Shine Cleaning</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #0D9488;
+      --primary-dark: #0F766E;
+      --primary-light: #CCFBF1;
+      --bg: #F0FDF9;
+      --surface: #FFFFFF;
+      --border: #E5E7EB;
+      --text: #111827;
+      --text-muted: #6B7280;
+      --danger: #EF4444;
+      --danger-light: #FEE2E2;
+      --radius: 16px;
+      --shadow: 0 4px 24px rgba(13,148,136,0.12);
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior: none;
+    }
+
+    #app {
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ── Screens ── */
+    .screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .screen.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* ── Safe area ── */
+    .safe-top { padding-top: max(20px, env(safe-area-inset-top)); }
+    .safe-bottom { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+
+    /* ── PIN Screen ── */
+    #screen-pin {
+      background: linear-gradient(160deg, #0D9488 0%, #0F766E 100%);
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      gap: 0;
+    }
+
+    .pin-logo {
+      width: 90px;
+      height: 90px;
+      border-radius: 22px;
+      object-fit: cover;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+      margin-bottom: 20px;
+    }
+
+    .pin-title {
+      color: white;
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .pin-subtitle {
+      color: rgba(255,255,255,0.72);
+      font-size: 15px;
+      margin-bottom: 32px;
+    }
+
+    .pin-dots {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+
+    .pin-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.6);
+      background: transparent;
+      transition: all 0.15s ease;
+    }
+    .pin-dot.filled {
+      background: white;
+      border-color: white;
+      transform: scale(1.1);
+    }
+
+    .pin-error {
+      color: #FCA5A5;
+      font-size: 14px;
+      height: 20px;
+      margin-bottom: 24px;
+      text-align: center;
+      transition: opacity 0.2s;
+    }
+    .pin-error.hidden { opacity: 0; }
+
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 72px);
+      gap: 14px;
+    }
+
+    .key {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: white;
+      font-size: 26px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.1s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .key:active { background: rgba(255,255,255,0.35); transform: scale(0.94); }
+    .key.key-empty { background: transparent; pointer-events: none; }
+    .key.key-del { font-size: 22px; }
+
+    .pin-loading {
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: rgba(255,255,255,0.7);
+      font-size: 14px;
+      height: 24px;
+    }
+
+    /* ── Property List Screen ── */
+    #screen-properties {
+      background: var(--bg);
+    }
+
+    .prop-header {
+      background: var(--primary);
+      padding: 0 20px 24px;
+      padding-top: max(24px, env(safe-area-inset-top));
+    }
+
+    .prop-header-greeting {
+      color: rgba(255,255,255,0.8);
+      font-size: 14px;
+      margin-bottom: 2px;
+    }
+
+    .prop-header-name {
+      color: white;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .prop-header-sub {
+      color: rgba(255,255,255,0.7);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    .prop-list {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .prop-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      border: 1.5px solid transparent;
+      transition: border-color 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .prop-card:active { border-color: var(--primary); transform: scale(0.98); }
+
+    .prop-card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .prop-card-name {
+      flex: 1;
+      margin: 0 14px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    .prop-card-arrow {
+      color: var(--text-muted);
+      font-size: 18px;
+    }
+
+    .logout-wrap {
+      padding: 12px 16px;
+      padding-bottom: max(24px, env(safe-area-inset-bottom));
+    }
+
+    .btn-logout {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1.5px solid var(--border);
+      background: white;
+      color: var(--text-muted);
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-logout:active { background: #F9FAFB; }
+
+    /* ── Report Screen ── */
+    #screen-report {
+      background: var(--bg);
+    }
+
+    .report-header {
+      background: var(--primary);
+      padding: 0 16px 20px;
+      padding-top: max(20px, env(safe-area-inset-top));
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .btn-back {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-size: 14px;
+      padding: 8px 14px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-top: 2px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-back:active { background: rgba(255,255,255,0.35); }
+
+    .report-header-text { flex: 1; }
+
+    .report-header-label {
+      color: rgba(255,255,255,0.7);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+    }
+
+    .report-header-prop {
+      color: white;
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .report-body {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding-bottom: max(100px, calc(env(safe-area-inset-bottom) + 80px));
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .card-title {
+      padding: 16px 20px 12px;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--primary-dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid #F3F4F6;
+    }
+
+    /* Supplies */
+    .supply-row {
+      display: flex;
+      align-items: center;
+      padding: 13px 20px;
+      border-bottom: 1px solid #F9FAFB;
+      transition: background 0.15s;
+    }
+    .supply-row:last-child { border-bottom: none; }
+    .supply-row.used { background: #F0FDF9; }
+
+    .supply-label {
+      flex: 1;
+      font-size: 15px;
+      color: var(--text);
+    }
+
+    .supply-controls {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      background: #F3F4F6;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .supply-btn {
+      width: 36px;
+      height: 36px;
+      border: none;
+      background: transparent;
+      font-size: 20px;
+      font-weight: 400;
+      color: var(--primary-dark);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.1s;
+    }
+    .supply-btn:active { background: #E5E7EB; }
+    .supply-btn.btn-plus { color: var(--primary); font-weight: 600; }
+
+    .supply-count {
+      min-width: 32px;
+      text-align: center;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .supply-row.used .supply-count { color: var(--primary); }
+
+    /* Category header for TDANNA */
+    .category-header {
+      padding: 10px 20px 8px;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      background: #FAFAFA;
+      border-bottom: 1px solid #F3F4F6;
+    }
+
+    /* Photos */
+    .photo-add-btn {
+      margin: 16px 20px;
+      padding: 14px;
+      border-radius: 12px;
+      border: 2px dashed #D1D5DB;
+      background: transparent;
+      color: var(--primary);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: calc(100% - 40px);
+      -webkit-tap-highlight-color: transparent;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .photo-add-btn:active { border-color: var(--primary); background: var(--primary-light); }
+
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding: 0 16px 16px;
+    }
+
+    .photo-thumb {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #F3F4F6;
+    }
+
+    .photo-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .photo-remove {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.55);
+      border: none;
+      color: white;
+      font-size: 14px;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Damage notes */
+    .damage-textarea {
+      width: 100%;
+      border: none;
+      outline: none;
+      padding: 16px 20px;
+      font-size: 15px;
+      font-family: inherit;
+      color: var(--text);
+      background: transparent;
+      resize: none;
+      min-height: 100px;
+    }
+    .damage-textarea::placeholder { color: #D1D5DB; }
+
+    /* Submit bar */
+    .submit-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 12px 16px;
+      padding-bottom: max(20px, env(safe-area-inset-bottom));
+      background: white;
+      border-top: 1px solid var(--border);
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 16px;
+      border-radius: 14px;
+      border: none;
+      background: var(--primary);
+      color: white;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.15s, opacity 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-submit:active { background: var(--primary-dark); }
+    .btn-submit:disabled { opacity: 0.5; }
+
+    /* ── Success Screen ── */
+    #screen-success {
+      background: var(--primary);
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+    }
+
+    .success-circle {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      margin-bottom: 28px;
+      animation: pop 0.4s ease;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0); }
+      80% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    .success-title {
+      color: white;
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .success-sub {
+      color: rgba(255,255,255,0.75);
+      font-size: 16px;
+      text-align: center;
+      line-height: 1.5;
+      margin-bottom: 40px;
+    }
+
+    .btn-new-report {
+      padding: 16px 40px;
+      border-radius: 14px;
+      border: 2px solid rgba(255,255,255,0.5);
+      background: transparent;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-new-report:active { background: rgba(255,255,255,0.15); }
+
+    /* Spinner */
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2.5px solid rgba(255,255,255,0.4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Shake animation */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      40% { transform: translateX(8px); }
+      60% { transform: translateX(-6px); }
+      80% { transform: translateX(6px); }
+    }
+    .shake { animation: shake 0.4s ease; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Screen 1: PIN Login ── -->
+  <div id="screen-pin" class="screen active">
+    <img class="pin-logo" src="logo.jpg" alt="Paradise Shine">
+    <div class="pin-title">Cleaner Portal</div>
+    <div class="pin-subtitle">Enter your 4-digit PIN</div>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+    </div>
+    <div class="pin-error hidden" id="pin-error">Incorrect PIN. Try again.</div>
+    <div class="keypad" id="keypad">
+      <button class="key" data-d="1">1</button>
+      <button class="key" data-d="2">2</button>
+      <button class="key" data-d="3">3</button>
+      <button class="key" data-d="4">4</button>
+      <button class="key" data-d="5">5</button>
+      <button class="key" data-d="6">6</button>
+      <button class="key" data-d="7">7</button>
+      <button class="key" data-d="8">8</button>
+      <button class="key" data-d="9">9</button>
+      <button class="key key-empty"></button>
+      <button class="key" data-d="0">0</button>
+      <button class="key key-del" id="key-del">⌫</button>
+    </div>
+    <div class="pin-loading" id="pin-loading" style="display:none">
+      <div class="spinner" style="border-color:rgba(255,255,255,0.4);border-top-color:white"></div>
+      <span>Checking…</span>
+    </div>
+  </div>
+
+  <!-- ── Screen 2: Property List ── -->
+  <div id="screen-properties" class="screen">
+    <div class="prop-header safe-top">
+      <div class="prop-header-greeting">Welcome back,</div>
+      <div class="prop-header-name" id="prop-cleaner-name">Cleaner</div>
+      <div class="prop-header-sub">Tap a property to start your report</div>
+    </div>
+    <div class="prop-list" id="prop-list"></div>
+    <div class="logout-wrap safe-bottom">
+      <button class="btn-logout" id="btn-logout">Log Out</button>
+    </div>
+  </div>
+
+  <!-- ── Screen 3: Report Form ── -->
+  <div id="screen-report" class="screen">
+    <div class="report-header">
+      <button class="btn-back" id="btn-back">← Back</button>
+      <div class="report-header-text">
+        <div class="report-header-label">Cleaning Report</div>
+        <div class="report-header-prop" id="report-prop-name"></div>
+      </div>
+    </div>
+
+    <div class="report-body">
+      <!-- Supplies -->
+      <div class="card" id="supplies-card">
+        <div class="card-title">🧹 Supplies Used</div>
+        <div id="supplies-content"></div>
+      </div>
+
+      <!-- Photos -->
+      <div class="card">
+        <div class="card-title">📷 Photos</div>
+        <input type="file" id="photo-input" accept="image/*" multiple style="display:none">
+        <button class="photo-add-btn" id="photo-add-btn">
+          <span>+</span> Add Photos
+        </button>
+        <div class="photo-grid" id="photo-grid"></div>
+      </div>
+
+      <!-- Damage Notes -->
+      <div class="card">
+        <div class="card-title">⚠️ Damage / Issues</div>
+        <textarea class="damage-textarea" id="damage-notes"
+          placeholder="Describe any damage or issues found…"></textarea>
+      </div>
+    </div>
+
+    <div class="submit-bar">
+      <button class="btn-submit" id="btn-submit">
+        Submit Report
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Screen 4: Success ── -->
+  <div id="screen-success" class="screen">
+    <div class="success-circle">✓</div>
+    <div class="success-title">Report Submitted!</div>
+    <div class="success-sub" id="success-sub">
+      Danielle has been notified.<br>Great work today!
+    </div>
+    <button class="btn-new-report" id="btn-new-report">Submit Another Report</button>
+  </div>
+
+</div>
+
+<script>
+// ── Data ─────────────────────────────────────────────────────────────────────
+
+const SUPPLY_LABELS = {
+  toilet_paper: 'Toilet Paper',
+  paper_towels: 'Paper Towels',
+  sponge: 'Sponge',
+  dish_soap: 'Dish Soap',
+  hand_soap: 'Hand Soap',
+  laundry_pods: 'Laundry Pods',
+  dish_pods: 'Dish Pods',
+  soap_bars: 'Soap Bars',
+  shampoo: 'Shampoo',
+  conditioner: 'Conditioner',
+  body_wash: 'Body Wash',
+  trash_kitchen: 'Kitchen Trash Bags',
+  trash_bathroom: 'Bathroom Trash Bags',
+  detergent: 'Laundry Detergent',
+  bleach: 'Bleach',
+  shampoo_refill: 'Shampoo Refill',
+  conditioner_refill: 'Conditioner Refill',
+  body_wash_refill: 'Body Wash Refill',
+  snacks: 'Snacks',
+  waters: 'Waters',
+  toothbrushes: 'Toothbrushes',
+  razors: 'Razors',
+  cotton_swabs: 'Cotton Swabs',
+  hand_wipes: 'Hand Wipes',
+  mouthwash: 'Mouthwash',
+  toilet_bands: 'Toilet Bands',
+  stain_remover: 'Stain Remover',
+  shampoo_bottles: 'Shampoo Bottles',
+  conditioner_bottles: 'Conditioner Bottles',
+  body_wash_bottles: 'Body Wash Bottles',
+  soap_bottles: 'Soap Bottles',
+  lotion_bottles: 'Lotion Bottles',
+  toiletry_bags: 'Toiletry Bags',
+};
+
+const MICHAEL_NG = ['toilet_paper','paper_towels','sponge','dish_soap','hand_soap',
+  'laundry_pods','dish_pods','soap_bars','shampoo','conditioner','body_wash',
+  'trash_kitchen','trash_bathroom'];
+
+const LAPIERRE = ['toilet_paper','paper_towels','sponge','dish_soap','hand_soap',
+  'laundry_pods','detergent','dish_pods','bleach','shampoo_refill','conditioner_refill',
+  'body_wash_refill','snacks','waters','trash_kitchen','trash_bathroom'];
+
+const STANDARD_REFILL = ['toilet_paper','paper_towels','sponge','dish_soap','hand_soap',
+  'laundry_pods','detergent','dish_pods','bleach','shampoo_refill','conditioner_refill',
+  'body_wash_refill','trash_kitchen','trash_bathroom'];
+
+const TDANNA_GROUPS = [
+  { category: 'Bathroom', items: ['toilet_paper','toothbrushes','razors','cotton_swabs','hand_wipes','mouthwash','toilet_bands'] },
+  { category: 'Laundry',  items: ['laundry_pods','detergent','bleach','stain_remover'] },
+  { category: 'Toiletries Bags', items: ['shampoo_bottles','conditioner_bottles','body_wash_bottles','soap_bottles','lotion_bottles','toiletry_bags'] },
+  { category: 'Kitchen',  items: ['trash_kitchen','trash_bathroom','sponge','dish_soap','hand_soap','paper_towels','dish_pods'] },
+];
+
+const PROPERTY_SUPPLIES = {
+  '101 Newcastle Main House':              { grouped: false, items: MICHAEL_NG },
+  '101 Newcastle Guest House':             { grouped: false, items: MICHAEL_NG },
+  '1321 SE 2nd St Pompano Beach':          { grouped: false, items: LAPIERRE },
+  '931 SE 5th Ave Pompano Beach':          { grouped: false, items: LAPIERRE },
+  '2201 NE 19th Ave Wilton Manors':        { grouped: false, items: LAPIERRE },
+  '4550 NE 3rd Ave Oakland Park':          { grouped: false, items: LAPIERRE },
+  '2374 NE 8th Ct Pompano Beach':          { grouped: false, items: LAPIERRE },
+  '106 SE 10th Ct Deerfield Beach':        { grouped: false, items: LAPIERRE },
+  '21 SE 9th St Pompano Beach':            { grouped: false, items: LAPIERRE },
+  '258 Avalon Ave Lauderdale-By-The-Sea':  { grouped: false, items: LAPIERRE },
+  '426 Lucky Ln Delray Beach':             { grouped: false, items: STANDARD_REFILL },
+  '1445 Cindy Dr Lake Worth':              { grouped: false, items: STANDARD_REFILL },
+  '951 Selkirk Cottage 1/1':              { grouped: false, items: STANDARD_REFILL },
+  '951 Selkirk Main House 2/1':           { grouped: false, items: STANDARD_REFILL },
+  '511 S K St Lake Worth':                 { grouped: false, items: STANDARD_REFILL },
+  '3540 NE 28th Ave Lighthouse Point':     { grouped: false, items: STANDARD_REFILL },
+  '419 26th St West Palm Beach':           { grouped: false, items: STANDARD_REFILL },
+  '938 Flamingo Lake Dr West Palm Beach':  { grouped: false, items: STANDARD_REFILL },
+  '2624 SW 6th St Boynton Beach':          { grouped: false, items: STANDARD_REFILL },
+  '125 NW 3rd Ave Delray Beach':           { grouped: false, items: STANDARD_REFILL },
+  '1241 SW 27th Ave Boynton Beach':        { grouped: true,  groups: TDANNA_GROUPS },
+  '913 SE 16th Deerfield Beach':           { grouped: true,  groups: TDANNA_GROUPS },
+  '3002 Dunlin Rd Delray Beach':           { grouped: true,  groups: TDANNA_GROUPS },
+  '735 NW 35th St Oakland Park':           { grouped: true,  groups: TDANNA_GROUPS },
+  '2231 NE 38th St Lighthouse Point':      { grouped: true,  groups: TDANNA_GROUPS },
+  '126 NW 6th Ave Delray Beach':           { grouped: true,  groups: TDANNA_GROUPS },
+};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+
+const state = {
+  pin: '',
+  cleanerName: '',
+  properties: [],
+  selectedProperty: null,
+  supplies: {},
+  photos: [],
+  damageNotes: '',
+};
+
+// ── Screen management ─────────────────────────────────────────────────────────
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── PIN Logic ─────────────────────────────────────────────────────────────────
+
+function updatePinDots() {
+  document.querySelectorAll('.pin-dot').forEach((dot, i) => {
+    dot.classList.toggle('filled', i < state.pin.length);
+  });
+}
+
+function pinError(msg) {
+  const el = document.getElementById('pin-error');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+  document.getElementById('pin-dots').classList.add('shake');
+  setTimeout(() => document.getElementById('pin-dots').classList.remove('shake'), 400);
+  state.pin = '';
+  updatePinDots();
+}
+
+async function submitPin() {
+  const keypad = document.getElementById('keypad');
+  const loading = document.getElementById('pin-loading');
+  keypad.style.opacity = '0.4';
+  keypad.style.pointerEvents = 'none';
+  loading.style.display = 'flex';
+
+  try {
+    const res = await fetch('/verify-pin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: state.pin }),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      state.cleanerName = data.name;
+      state.properties = data.properties || [];
+      document.getElementById('pin-error').classList.add('hidden');
+      renderPropertyList();
+      showScreen('screen-properties');
+    } else {
+      pinError('Incorrect PIN. Try again.');
+    }
+  } catch (e) {
+    pinError('Connection error. Try again.');
+  } finally {
+    keypad.style.opacity = '';
+    keypad.style.pointerEvents = '';
+    loading.style.display = 'none';
+  }
+}
+
+document.getElementById('keypad').addEventListener('click', e => {
+  const key = e.target.closest('.key');
+  if (!key) return;
+  if (key.id === 'key-del') {
+    state.pin = state.pin.slice(0, -1);
+    updatePinDots();
+    document.getElementById('pin-error').classList.add('hidden');
+    return;
+  }
+  const d = key.dataset.d;
+  if (d === undefined) return;
+  if (state.pin.length >= 4) return;
+  state.pin += d;
+  updatePinDots();
+  if (state.pin.length === 4) submitPin();
+});
+
+// ── Property List ─────────────────────────────────────────────────────────────
+
+function renderPropertyList() {
+  document.getElementById('prop-cleaner-name').textContent = state.cleanerName;
+  const list = document.getElementById('prop-list');
+  list.innerHTML = '';
+
+  if (!state.properties.length) {
+    list.innerHTML = '<p style="padding:24px;text-align:center;color:#9CA3AF">No properties assigned yet. Contact Danielle.</p>';
+    return;
+  }
+
+  state.properties.forEach(propName => {
+    const card = document.createElement('div');
+    card.className = 'prop-card';
+    card.innerHTML = `
+      <div class="prop-card-icon">🏠</div>
+      <div class="prop-card-name">${propName}</div>
+      <div class="prop-card-arrow">›</div>
+    `;
+    card.addEventListener('click', () => openReport(propName));
+    list.appendChild(card);
+  });
+}
+
+document.getElementById('btn-logout').addEventListener('click', () => {
+  state.pin = '';
+  state.cleanerName = '';
+  state.properties = [];
+  updatePinDots();
+  document.getElementById('pin-error').classList.add('hidden');
+  showScreen('screen-pin');
+});
+
+// ── Report Form ───────────────────────────────────────────────────────────────
+
+function openReport(propName) {
+  state.selectedProperty = propName;
+  state.supplies = {};
+  state.photos = [];
+  state.damageNotes = '';
+  document.getElementById('damage-notes').value = '';
+  document.getElementById('photo-grid').innerHTML = '';
+  document.getElementById('photo-input').value = '';
+  document.getElementById('report-prop-name').textContent = propName;
+  renderSupplies(propName);
+  showScreen('screen-report');
+}
+
+function renderSupplies(propName) {
+  const config = PROPERTY_SUPPLIES[propName];
+  const container = document.getElementById('supplies-content');
+  container.innerHTML = '';
+
+  if (!config) {
+    container.innerHTML = '<p style="padding:16px 20px;color:#9CA3AF">No supply list configured for this property.</p>';
+    return;
+  }
+
+  if (config.grouped) {
+    config.groups.forEach(group => {
+      const catEl = document.createElement('div');
+      catEl.className = 'category-header';
+      catEl.textContent = group.category;
+      container.appendChild(catEl);
+      group.items.forEach(key => container.appendChild(makeSupplyRow(key)));
+    });
+  } else {
+    config.items.forEach(key => container.appendChild(makeSupplyRow(key)));
+  }
+}
+
+function makeSupplyRow(key) {
+  const row = document.createElement('div');
+  row.className = 'supply-row';
+  row.id = `row-${key}`;
+  row.innerHTML = `
+    <span class="supply-label">${SUPPLY_LABELS[key] || key}</span>
+    <div class="supply-controls">
+      <button class="supply-btn btn-minus" data-key="${key}">−</button>
+      <span class="supply-count" id="count-${key}">0</span>
+      <button class="supply-btn btn-plus" data-key="${key}">+</button>
+    </div>
+  `;
+  return row;
+}
+
+document.getElementById('supplies-content').addEventListener('click', e => {
+  const btn = e.target.closest('.supply-btn');
+  if (!btn) return;
+  const key = btn.dataset.key;
+  const delta = btn.classList.contains('btn-plus') ? 1 : -1;
+  state.supplies[key] = Math.max(0, (state.supplies[key] || 0) + delta);
+  const countEl = document.getElementById(`count-${key}`);
+  if (countEl) countEl.textContent = state.supplies[key];
+  const row = document.getElementById(`row-${key}`);
+  if (row) row.classList.toggle('used', state.supplies[key] > 0);
+});
+
+// ── Photos ────────────────────────────────────────────────────────────────────
+
+document.getElementById('photo-add-btn').addEventListener('click', () => {
+  document.getElementById('photo-input').click();
+});
+
+document.getElementById('photo-input').addEventListener('change', async e => {
+  const files = Array.from(e.target.files);
+  for (const file of files) {
+    if (state.photos.length >= 10) break;
+    const dataUrl = await resizeImage(file, 1200, 0.82);
+    state.photos.push(dataUrl);
+  }
+  renderPhotos();
+  e.target.value = '';
+});
+
+function renderPhotos() {
+  const grid = document.getElementById('photo-grid');
+  grid.innerHTML = '';
+  state.photos.forEach((dataUrl, i) => {
+    const thumb = document.createElement('div');
+    thumb.className = 'photo-thumb';
+    thumb.innerHTML = `
+      <img src="${dataUrl}" alt="Photo ${i+1}">
+      <button class="photo-remove" data-i="${i}">×</button>
+    `;
+    grid.appendChild(thumb);
+  });
+}
+
+document.getElementById('photo-grid').addEventListener('click', e => {
+  const btn = e.target.closest('.photo-remove');
+  if (!btn) return;
+  const i = parseInt(btn.dataset.i, 10);
+  state.photos.splice(i, 1);
+  renderPhotos();
+});
+
+function resizeImage(file, maxW, quality) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const scale = Math.min(1, maxW / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
+}
+
+// ── Submit ────────────────────────────────────────────────────────────────────
+
+document.getElementById('btn-submit').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Submitting…';
+
+  const damageNotes = document.getElementById('damage-notes').value.trim();
+
+  try {
+    const res = await fetch('/submit-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cleaner_name: state.cleanerName,
+        property_name: state.selectedProperty,
+        supplies: Object.fromEntries(
+          Object.entries(state.supplies).filter(([, v]) => v > 0)
+        ),
+        damage_notes: damageNotes,
+        photos: state.photos.filter(Boolean),
+      }),
+    });
+
+    if (res.ok) {
+      document.getElementById('success-sub').textContent =
+        `Danielle has been notified about ${state.selectedProperty}. Great work, ${state.cleanerName}!`;
+      showScreen('screen-success');
+    } else {
+      alert('Something went wrong. Please try again.');
+    }
+  } catch (e) {
+    alert('Network error. Check your connection and try again.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Submit Report';
+  }
+});
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+
+document.getElementById('btn-back').addEventListener('click', () => {
+  showScreen('screen-properties');
+});
+
+document.getElementById('btn-new-report').addEventListener('click', () => {
+  showScreen('screen-properties');
+});
+
+// ── Service Worker ────────────────────────────────────────────────────────────
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
