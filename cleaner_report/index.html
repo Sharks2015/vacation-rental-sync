@@ -333,58 +333,79 @@
       border-bottom: 1px solid #F3F4F6;
     }
 
+    /* Fully Stocked button */
+    .fully-stocked-btn {
+      margin: 12px 16px 8px;
+      padding: 13px 18px;
+      border-radius: 12px;
+      border: 2px solid #D1D5DB;
+      background: white;
+      color: #374151;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: calc(100% - 32px);
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .fully-stocked-btn.selected {
+      background: #D1FAE5;
+      border-color: #059669;
+      color: #065F46;
+    }
+    .fully-stocked-btn .fs-check {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid currentColor;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+
     /* Supplies */
     .supply-row {
       display: flex;
       align-items: center;
-      padding: 13px 20px;
+      padding: 12px 16px;
       border-bottom: 1px solid #F9FAFB;
-      transition: background 0.15s;
+      gap: 10px;
     }
     .supply-row:last-child { border-bottom: none; }
-    .supply-row.used { background: #EFF6FF; }
+    .supply-row.flagged-low  { background: #FFFBEB; }
+    .supply-row.flagged-out  { background: #FEF2F2; }
 
     .supply-label {
       flex: 1;
-      font-size: 15px;
+      font-size: 14px;
       color: var(--text);
+      min-width: 0;
     }
 
-    .supply-controls {
-      display: flex;
-      align-items: center;
-      gap: 0;
-      background: #F3F4F6;
-      border-radius: 10px;
-      overflow: hidden;
-    }
+    .supply-status { display: flex; gap: 6px; flex-shrink: 0; }
 
-    .supply-btn {
-      width: 36px;
-      height: 36px;
-      border: none;
-      background: transparent;
-      font-size: 20px;
-      font-weight: 400;
-      color: var(--primary-dark);
+    .status-btn {
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1.5px solid #E5E7EB;
+      background: white;
+      font-size: 12px;
+      font-weight: 600;
+      color: #9CA3AF;
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      white-space: nowrap;
+      transition: all 0.12s;
       -webkit-tap-highlight-color: transparent;
-      transition: background 0.1s;
+      line-height: 1;
     }
-    .supply-btn:active { background: #E5E7EB; }
-    .supply-btn.btn-plus { color: var(--primary); font-weight: 600; }
-
-    .supply-count {
-      min-width: 32px;
-      text-align: center;
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--text);
-    }
-    .supply-row.used .supply-count { color: var(--primary); }
+    .status-btn:active { opacity: 0.7; }
+    .status-btn.active-low  { background: #FEF3C7; border-color: #F59E0B; color: #92400E; }
+    .status-btn.active-out  { background: #FEE2E2; border-color: #EF4444; color: #B91C1C; }
 
     /* Category header for TDANNA */
     .category-header {
@@ -469,9 +490,44 @@
       color: var(--text);
       background: transparent;
       resize: none;
-      min-height: 100px;
+      min-height: 110px;
     }
     .damage-textarea::placeholder { color: #D1D5DB; }
+
+    .disclaimer {
+      padding: 12px 20px 16px;
+      border-top: 1px solid #F3F4F6;
+    }
+    .disclaimer p {
+      font-size: 12px;
+      color: #9CA3AF;
+      line-height: 1.55;
+      margin-bottom: 8px;
+    }
+    .disclaimer p:last-child { margin-bottom: 0; }
+
+    /* Error toast */
+    .error-toast {
+      position: fixed;
+      top: max(28px, env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1F2937;
+      color: white;
+      padding: 14px 22px;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 9999;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.28);
+      text-align: center;
+      max-width: 88vw;
+      animation: toastIn 0.25s ease;
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
 
     /* Submit bar */
     .submit-bar {
@@ -643,10 +699,25 @@
     </div>
 
     <div class="report-body">
-      <!-- Supplies -->
+      <!-- Inventory -->
       <div class="card" id="supplies-card">
-        <div class="card-title">🧹 Supplies Used</div>
+        <div class="card-title">🧹 Inventory</div>
+        <button class="fully-stocked-btn" id="fully-stocked-btn">
+          <span class="fs-check" id="fs-check"></span>
+          Fully Stocked — Skip This Section
+        </button>
         <div id="supplies-content"></div>
+      </div>
+
+      <!-- Damages, Smells & Stains -->
+      <div class="card">
+        <div class="card-title">⚠️ Damages, Smells &amp; Stains</div>
+        <textarea class="damage-textarea" id="damage-notes"
+          placeholder="Describe any damage, bad smells, or stained items…"></textarea>
+        <div class="disclaimer">
+          <p>Report damaged items, bad smells upon arrival, and stained towels or bed sheets after laundry is complete. Please specify towel size or bed sheet size needed for replacement. Only report stains that do not come off after washing.</p>
+          <p>Reporte artículos dañados, malos olores al llegar, y toallas o sábanas manchadas después de terminar la lavandería. Por favor especifique el tamaño de la toalla o sábana que necesita reemplazo. Solo reporte manchas que no salgan después del lavado.</p>
+        </div>
       </div>
 
       <!-- Photos -->
@@ -657,13 +728,6 @@
           <span>+</span> Add Photos
         </button>
         <div class="photo-grid" id="photo-grid"></div>
-      </div>
-
-      <!-- Damage Notes -->
-      <div class="card">
-        <div class="card-title">⚠️ Damage / Issues</div>
-        <textarea class="damage-textarea" id="damage-notes"
-          placeholder="Describe any damage or issues found…"></textarea>
       </div>
     </div>
 
@@ -782,7 +846,8 @@ const state = {
   cleanerName: '',
   properties: [],
   selectedProperty: null,
-  supplies: {},
+  supplies: {},       // {key: 'running_low' | 'completely_out' | null}
+  fullyStocked: false,
   photos: [],
   damageNotes: '',
 };
@@ -901,13 +966,19 @@ document.getElementById('btn-logout').addEventListener('click', () => {
 function openReport(propName) {
   state.selectedProperty = propName;
   state.supplies = {};
+  state.fullyStocked = false;
   state.photos = [];
   state.damageNotes = '';
   document.getElementById('damage-notes').value = '';
   document.getElementById('photo-grid').innerHTML = '';
   document.getElementById('photo-input').value = '';
   document.getElementById('report-prop-name').textContent = propName;
+  // Reset fully stocked button
+  const fsBtn = document.getElementById('fully-stocked-btn');
+  fsBtn.classList.remove('selected');
+  document.getElementById('fs-check').textContent = '';
   renderSupplies(propName);
+  document.getElementById('supplies-content').style.display = '';
   showScreen('screen-report');
 }
 
@@ -948,25 +1019,44 @@ function makeSupplyRow(key) {
   row.id = `row-${key}`;
   row.innerHTML = `
     <span class="supply-label">${SUPPLY_LABELS[key] || key}</span>
-    <div class="supply-controls">
-      <button class="supply-btn btn-minus" data-key="${key}">−</button>
-      <span class="supply-count" id="count-${key}">0</span>
-      <button class="supply-btn btn-plus" data-key="${key}">+</button>
+    <div class="supply-status">
+      <button class="status-btn" data-key="${key}" data-status="running_low">Running Low</button>
+      <button class="status-btn" data-key="${key}" data-status="completely_out">Completely Out</button>
     </div>
   `;
   return row;
 }
 
+function updateSupplyRowUI(key) {
+  const row = document.getElementById(`row-${key}`);
+  if (!row) return;
+  const status = state.supplies[key];
+  row.classList.toggle('flagged-low', status === 'running_low');
+  row.classList.toggle('flagged-out', status === 'completely_out');
+  row.querySelectorAll('.status-btn').forEach(btn => {
+    btn.classList.remove('active-low', 'active-out');
+    if (btn.dataset.status === 'running_low'    && status === 'running_low')    btn.classList.add('active-low');
+    if (btn.dataset.status === 'completely_out' && status === 'completely_out') btn.classList.add('active-out');
+  });
+}
+
 document.getElementById('supplies-content').addEventListener('click', e => {
-  const btn = e.target.closest('.supply-btn');
+  const btn = e.target.closest('.status-btn');
   if (!btn) return;
   const key = btn.dataset.key;
-  const delta = btn.classList.contains('btn-plus') ? 1 : -1;
-  state.supplies[key] = Math.max(0, (state.supplies[key] || 0) + delta);
-  const countEl = document.getElementById(`count-${key}`);
-  if (countEl) countEl.textContent = state.supplies[key];
-  const row = document.getElementById(`row-${key}`);
-  if (row) row.classList.toggle('used', state.supplies[key] > 0);
+  const status = btn.dataset.status;
+  state.supplies[key] = (state.supplies[key] === status) ? null : status;
+  updateSupplyRowUI(key);
+});
+
+// Fully Stocked
+document.getElementById('fully-stocked-btn').addEventListener('click', () => {
+  state.fullyStocked = !state.fullyStocked;
+  const fsBtn = document.getElementById('fully-stocked-btn');
+  fsBtn.classList.toggle('selected', state.fullyStocked);
+  document.getElementById('fs-check').textContent = state.fullyStocked ? '✓' : '';
+  document.getElementById('supplies-content').style.display = state.fullyStocked ? 'none' : '';
+  if (state.fullyStocked) state.supplies = {};
 });
 
 // ── Photos ────────────────────────────────────────────────────────────────────
@@ -1026,14 +1116,35 @@ function resizeImage(file, maxW, quality) {
   });
 }
 
+// ── Toast ─────────────────────────────────────────────────────────────────────
+
+function showToast(msg) {
+  document.querySelector('.error-toast')?.remove();
+  const toast = document.createElement('div');
+  toast.className = 'error-toast';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3500);
+}
+
 // ── Submit ────────────────────────────────────────────────────────────────────
 
 document.getElementById('btn-submit').addEventListener('click', async () => {
+  const damageNotes = document.getElementById('damage-notes').value.trim();
+
+  // Photos required if damage notes filled
+  if (damageNotes && state.photos.filter(Boolean).length === 0) {
+    showToast('📷 Photos required before submitting report.');
+    return;
+  }
+
   const btn = document.getElementById('btn-submit');
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner"></div> Submitting…';
 
-  const damageNotes = document.getElementById('damage-notes').value.trim();
+  const suppliesFiltered = Object.fromEntries(
+    Object.entries(state.supplies).filter(([, v]) => v)
+  );
 
   try {
     const res = await fetch('/submit-report', {
@@ -1042,9 +1153,8 @@ document.getElementById('btn-submit').addEventListener('click', async () => {
       body: JSON.stringify({
         cleaner_name: state.cleanerName,
         property_name: state.selectedProperty,
-        supplies: Object.fromEntries(
-          Object.entries(state.supplies).filter(([, v]) => v > 0)
-        ),
+        fully_stocked: state.fullyStocked,
+        supplies: suppliesFiltered,
         damage_notes: damageNotes,
         photos: state.photos.filter(Boolean),
       }),
@@ -1055,10 +1165,10 @@ document.getElementById('btn-submit').addEventListener('click', async () => {
         `Danielle has been notified about ${state.selectedProperty}. Great work, ${state.cleanerName}!`;
       showScreen('screen-success');
     } else {
-      alert('Something went wrong. Please try again.');
+      showToast('Something went wrong. Please try again.');
     }
   } catch (e) {
-    alert('Network error. Check your connection and try again.');
+    showToast('Network error. Check your connection and try again.');
   } finally {
     btn.disabled = false;
     btn.innerHTML = 'Submit Report';

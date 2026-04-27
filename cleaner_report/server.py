@@ -111,6 +111,7 @@ def submit_report():
     data = request.get_json() or {}
     cleaner_name = data.get("cleaner_name", "")
     property_name = data.get("property_name", "")
+    fully_stocked = data.get("fully_stocked", False)
     supplies = data.get("supplies", {})
     damage_notes = data.get("damage_notes", "")
     photos = data.get("photos", [])
@@ -118,13 +119,13 @@ def submit_report():
     manager = _get_property_manager(property_name)
 
     try:
-        _send_email(cleaner_name, property_name, supplies, damage_notes, photos, manager)
+        _send_email(cleaner_name, property_name, fully_stocked, supplies, damage_notes, photos, manager)
     except Exception as e:
         print(f"Email error: {e}")
 
     if GHL_WEBHOOK_URL:
         try:
-            _forward_to_ghl(cleaner_name, property_name, supplies, damage_notes, manager)
+            _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage_notes, manager)
         except Exception as e:
             print(f"GHL webhook error: {e}")
 
@@ -152,27 +153,34 @@ def _get_property_manager(property_name):
         return {}
 
 
-def _supplies_html(supplies):
+STATUS_LABELS = {"running_low": "⚠️ Running Low", "completely_out": "🔴 Completely Out"}
+STATUS_COLORS = {"running_low": "#FEF3C7", "completely_out": "#FEE2E2"}
+
+
+def _supplies_html(fully_stocked, supplies):
+    if fully_stocked:
+        return "<p style='color:#059669;font-weight:600'>✅ All supplies fully stocked</p>"
     if not supplies:
-        return "<p style='color:#6B7280'>No supplies logged.</p>"
+        return "<p style='color:#6B7280'>No supply issues reported.</p>"
     rows = "".join(
-        f"<tr><td style='padding:8px 16px;border-bottom:1px solid #F3F4F6'>"
+        f"<tr style='background:{STATUS_COLORS.get(v,'white')}'>"
+        f"<td style='padding:8px 16px;border-bottom:1px solid #F3F4F6'>"
         f"{SUPPLY_LABELS.get(k, k.replace('_',' ').title())}</td>"
-        f"<td style='padding:8px 16px;border-bottom:1px solid #F3F4F6;text-align:center;font-weight:600'>{v}</td></tr>"
-        for k, v in supplies.items()
-        if v
+        f"<td style='padding:8px 16px;border-bottom:1px solid #F3F4F6;font-weight:600'>"
+        f"{STATUS_LABELS.get(v, v)}</td></tr>"
+        for k, v in supplies.items() if v
     )
     return (
         "<table style='border-collapse:collapse;width:100%;max-width:420px;font-size:15px'>"
-        "<thead><tr style='background:#F0FDF9'>"
-        "<th style='padding:10px 16px;text-align:left;color:#0D9488'>Item</th>"
-        "<th style='padding:10px 16px;text-align:center;color:#0D9488'>Qty Used</th>"
+        "<thead><tr style='background:#F3F4F6'>"
+        "<th style='padding:10px 16px;text-align:left'>Item</th>"
+        "<th style='padding:10px 16px;text-align:left'>Status</th>"
         "</tr></thead>"
         f"<tbody>{rows}</tbody></table>"
     )
 
 
-def _send_email(cleaner_name, property_name, supplies, damage_notes, photos, manager):
+def _send_email(cleaner_name, property_name, fully_stocked, supplies, damage_notes, photos, manager):
     smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
     smtp_port = int(os.getenv("SMTP_PORT", 587))
     smtp_user = os.getenv("SMTP_USER", "")
@@ -204,14 +212,14 @@ def _send_email(cleaner_name, property_name, supplies, damage_notes, photos, man
         f"<img src='cid:photo{i}' style='max-width:100%;border-radius:10px;margin-bottom:12px;display:block'>"
         for i in range(len(photos))
     )
-    photo_section = f"<h3 style='color:#0D9488'>Photos</h3>{photo_tags}" if photos else ""
+    photo_section = f"<h3 style='color:#1B3A6B'>Photos</h3>{photo_tags}" if photos else ""
 
     html = f"""
     <html><body style='font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;
       color:#1F2937;max-width:600px;margin:auto;padding:24px'>
-      <div style='background:#0D9488;padding:24px;border-radius:12px 12px 0 0;text-align:center'>
+      <div style='background:#1B3A6B;padding:24px;border-radius:12px 12px 0 0;text-align:center'>
         <h1 style='color:white;margin:0;font-size:22px'>Paradise Shine Cleaning</h1>
-        <p style='color:#CCFBF1;margin:6px 0 0;font-size:14px'>Cleaning Report</p>
+        <p style='color:#BFDBFE;margin:6px 0 0;font-size:14px'>Cleaning Report</p>
       </div>
       <div style='background:white;padding:24px;border:1px solid #E5E7EB;border-top:none;border-radius:0 0 12px 12px'>
         <p><strong>Property:</strong> {property_name}</p>
@@ -219,8 +227,8 @@ def _send_email(cleaner_name, property_name, supplies, damage_notes, photos, man
         <p><strong>Date:</strong> {datetime.now().strftime('%B %d, %Y at %I:%M %p')}</p>
         {mgr_line}
         <hr style='border:none;border-top:1px solid #E5E7EB;margin:20px 0'>
-        <h3 style='color:#0D9488'>Supplies Used</h3>
-        {_supplies_html(supplies)}
+        <h3 style='color:#1B3A6B'>Inventory</h3>
+        {_supplies_html(fully_stocked, supplies)}
         {dmg_section}
         {photo_section}
       </div>
@@ -247,7 +255,11 @@ def _send_email(cleaner_name, property_name, supplies, damage_notes, photos, man
         s.send_message(msg)
 
 
-def _forward_to_ghl(cleaner_name, property_name, supplies, damage_notes, manager):
+def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage_notes, manager):
+    supply_summary = "Fully stocked" if fully_stocked else ", ".join(
+        f"{SUPPLY_LABELS.get(k, k)}: {STATUS_LABELS.get(v, v)}"
+        for k, v in supplies.items() if v
+    ) or "No issues"
     payload = {
         "cleaner_name": cleaner_name,
         "property_name": property_name,
@@ -255,9 +267,7 @@ def _forward_to_ghl(cleaner_name, property_name, supplies, damage_notes, manager
         "manager_name": manager.get("name", ""),
         "manager_email": manager.get("email", ""),
         "manager_phone": manager.get("phone", ""),
-        "supplies_summary": ", ".join(
-            f"{SUPPLY_LABELS.get(k, k)}: {v}" for k, v in supplies.items() if v
-        ),
+        "supplies_summary": supply_summary,
         "submitted_at": datetime.now().isoformat(),
     }
     requests.post(GHL_WEBHOOK_URL, json=payload, timeout=10)
