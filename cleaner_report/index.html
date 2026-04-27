@@ -909,8 +909,16 @@ function openReport(propName) {
   showScreen('screen-report');
 }
 
+function findSupplyConfig(propName) {
+  if (PROPERTY_SUPPLIES[propName]) return PROPERTY_SUPPLIES[propName];
+  const norm = s => s.toLowerCase().trim().replace(/\s+/g, ' ');
+  const target = norm(propName);
+  const key = Object.keys(PROPERTY_SUPPLIES).find(k => norm(k) === target);
+  return key ? PROPERTY_SUPPLIES[key] : null;
+}
+
 function renderSupplies(propName) {
-  const config = PROPERTY_SUPPLIES[propName];
+  const config = findSupplyConfig(propName);
   const container = document.getElementById('supplies-content');
   container.innerHTML = '';
 
