@@ -129,7 +129,53 @@ def submit_report():
         except Exception as e:
             print(f"GHL webhook error: {e}")
 
+    try:
+        _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_notes, photos)
+    except Exception as e:
+        print(f"Save report error: {e}")
+
     return jsonify({"success": True})
+
+
+@app.route("/history", methods=["GET"])
+def get_history():
+    cleaner_name = request.args.get("cleaner", "")
+    try:
+        reports_tbl = table("Inventory/Damage Reports")
+        formula = f"{{Cleaner Name}}='{cleaner_name}'" if cleaner_name else ""
+        records = reports_tbl.all(formula=formula) if formula else reports_tbl.all()
+        reports = []
+        for r in sorted(records, key=lambda x: x["fields"].get("Submitted At", ""), reverse=True)[:50]:
+            f = r["fields"]
+            reports.append({
+                "property": f.get("Property", ""),
+                "cleaner": f.get("Cleaner Name", ""),
+                "submitted_at": f.get("Submitted At", ""),
+                "fully_stocked": f.get("Fully Stocked", False),
+                "supplies_flagged": f.get("Supplies Flagged", ""),
+                "damage_notes": f.get("Damage Notes", ""),
+                "photo_count": f.get("Photo Count", 0),
+            })
+        return jsonify({"success": True, "reports": reports})
+    except Exception as e:
+        print(f"History error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+def _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_notes, photos):
+    flagged = "" if fully_stocked else ", ".join(
+        f"{SUPPLY_LABELS.get(k, k)}: {STATUS_LABELS.get(v, v)}"
+        for k, v in supplies.items() if v
+    )
+    table("Inventory/Damage Reports").create({
+        "Property": property_name,
+        "Cleaner Name": cleaner_name,
+        "Submitted At": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "Fully Stocked": fully_stocked,
+        "Supplies Flagged": flagged,
+        "Damage Notes": damage_notes,
+        "Photo Count": len([p for p in photos if p]),
+    })
 
 
 def _get_property_manager(property_name):
