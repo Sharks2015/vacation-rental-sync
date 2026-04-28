@@ -141,7 +141,7 @@ def submit_report():
 def get_history():
     cleaner_name = request.args.get("cleaner", "")
     try:
-        reports_tbl = table("Inventory/Damage Reports")
+        reports_tbl = table("Cleaning Reports")
         formula = f"{{Cleaner Name}}='{cleaner_name}'" if cleaner_name else ""
         records = reports_tbl.all(formula=formula) if formula else reports_tbl.all()
         reports = []
@@ -167,7 +167,7 @@ def _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_no
         f"{SUPPLY_LABELS.get(k, k)}: {STATUS_LABELS.get(v, v)}"
         for k, v in supplies.items() if v
     )
-    table("Inventory/Damage Reports").create({
+    table("Cleaning Reports").create({
         "Property": property_name,
         "Cleaner Name": cleaner_name,
         "Submitted At": datetime.now().strftime("%Y-%m-%d %H:%M"),
