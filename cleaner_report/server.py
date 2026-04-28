@@ -304,9 +304,8 @@ def _send_email(cleaner_name, property_name, fully_stocked, supplies, damage_not
 
     recipients = [NOTIFY_EMAIL]
 
-    # If there are photos or damage notes, also email the property manager
     manager_email = manager.get("email", "") if manager else ""
-    if (photos or damage_notes) and manager_email and manager_email != NOTIFY_EMAIL:
+    if manager_email and manager_email != NOTIFY_EMAIL:
         recipients.append(manager_email)
 
     with smtplib.SMTP(smtp_host, smtp_port) as s:
