@@ -229,18 +229,9 @@ def _supplies_html(fully_stocked, supplies):
     )
 
 
-def _send_email(cleaner_name, property_name, fully_stocked, supplies, damage_notes, photos, manager):
-    smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
-    smtp_port = int(os.getenv("SMTP_PORT", 587))
+def _build_email(cleaner_name, property_name, fully_stocked, supplies, damage_notes, photos, manager, recipient_email, recipient_name):
     smtp_user = os.getenv("SMTP_USER", "")
-    smtp_pass = os.getenv("SMTP_PASSWORD", "")
-
-    msg = MIMEMultipart("related")
-    msg["From"] = smtp_user
-    msg["To"] = NOTIFY_EMAIL
-    msg["Subject"] = (
-        f"Cleaning Report — {property_name} — {datetime.now().strftime('%b %d, %Y')}"
-    )
+    subject = f"Cleaning Report — {property_name} — {datetime.now().strftime('%b %d, %Y')}"
 
     mgr_line = ""
     if manager:
@@ -253,7 +244,7 @@ def _send_email(cleaner_name, property_name, fully_stocked, supplies, damage_not
     if damage_notes:
         dmg_section = (
             f"<div style='margin:20px 0;padding:16px;background:#FEF2F2;border-left:4px solid #EF4444;border-radius:8px'>"
-            f"<strong style='color:#B91C1C'>Damage / Issues:</strong>"
+            f"<strong style='color:#B91C1C'>Damages, Smells &amp; Stains:</strong>"
             f"<p style='margin:8px 0 0;color:#374151'>{damage_notes}</p></div>"
         )
 
@@ -284,6 +275,10 @@ def _send_email(cleaner_name, property_name, fully_stocked, supplies, damage_not
     </body></html>
     """
 
+    msg = MIMEMultipart("related")
+    msg["From"] = smtp_user
+    msg["To"] = recipient_email
+    msg["Subject"] = subject
     msg.attach(MIMEText(html, "html"))
 
     for i, photo_b64 in enumerate(photos):
@@ -298,10 +293,32 @@ def _send_email(cleaner_name, property_name, fully_stocked, supplies, damage_not
         except Exception as e:
             print(f"Photo attach error [{i}]: {e}")
 
+    return msg
+
+
+def _send_email(cleaner_name, property_name, fully_stocked, supplies, damage_notes, photos, manager):
+    smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
+    smtp_port = int(os.getenv("SMTP_PORT", 587))
+    smtp_user = os.getenv("SMTP_USER", "")
+    smtp_pass = os.getenv("SMTP_PASSWORD", "")
+
+    recipients = [NOTIFY_EMAIL]
+
+    # If there are photos or damage notes, also email the property manager
+    manager_email = manager.get("email", "") if manager else ""
+    if (photos or damage_notes) and manager_email and manager_email != NOTIFY_EMAIL:
+        recipients.append(manager_email)
+
     with smtplib.SMTP(smtp_host, smtp_port) as s:
         s.starttls()
         s.login(smtp_user, smtp_pass)
-        s.send_message(msg)
+        for recipient in recipients:
+            msg = _build_email(
+                cleaner_name, property_name, fully_stocked, supplies,
+                damage_notes, photos, manager, recipient, recipient
+            )
+            s.send_message(msg)
+            print(f"Email sent to {recipient}")
 
 
 def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage_notes, manager):
