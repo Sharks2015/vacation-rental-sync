@@ -261,6 +261,38 @@
     }
     .btn-logout:active { background: #F9FAFB; }
 
+    /* Bottom tab bar */
+    .tab-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      border-top: 1px solid var(--border);
+      display: flex;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+      z-index: 100;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 8px 2px;
+      border: none;
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      color: #9CA3AF;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .tab-btn .tab-icon { font-size: 22px; line-height: 1; }
+    .tab-btn.active { color: var(--primary); }
+    .tab-btn:active { opacity: 0.7; }
+
     /* ── Report Screen ── */
     #screen-report {
       background: var(--bg);
@@ -730,26 +762,39 @@
 
   <!-- ── Screen 2: Property List ── -->
   <div id="screen-properties" class="screen">
-    <div class="prop-header safe-top">
-      <div class="prop-header-greeting">Welcome back,</div>
-      <div class="prop-header-name" id="prop-cleaner-name">Cleaner</div>
-      <div class="prop-header-sub">Tap a property to start your report</div>
+    <div class="prop-header safe-top" style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div class="prop-header-greeting">Welcome back,</div>
+        <div class="prop-header-name" id="prop-cleaner-name">Cleaner</div>
+      </div>
+      <button id="btn-logout" style="background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.3);border-radius:10px;color:white;font-size:13px;font-weight:600;padding:8px 14px;cursor:pointer">Log Out</button>
     </div>
-    <div class="prop-list" id="prop-list"></div>
-    <div class="logout-wrap safe-bottom" style="display:flex;flex-direction:column;gap:8px">
-      <button class="history-btn" id="btn-history">📋 View Report History</button>
-      <button class="btn-logout" id="btn-logout">Log Out</button>
+    <div class="prop-list" id="prop-list" style="padding-bottom:80px"></div>
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tab-reports" onclick="switchTab('reports')">
+        <span class="tab-icon">🏠</span> Reports
+      </button>
+      <button class="tab-btn" id="tab-history" onclick="switchTab('history')">
+        <span class="tab-icon">📋</span> History
+      </button>
     </div>
   </div>
 
   <!-- ── Screen 5: History ── -->
   <div id="screen-history" class="screen">
     <div class="prop-header safe-top">
-      <button class="btn-back" id="btn-back-history" style="background:rgba(255,255,255,0.2);border:none;border-radius:10px;color:white;font-size:14px;padding:8px 14px;cursor:pointer;margin-bottom:10px">← Back</button>
       <div class="prop-header-name">Report History</div>
       <div class="prop-header-sub" id="history-subtitle">Your recent reports</div>
     </div>
-    <div id="history-list" style="padding:16px;display:flex;flex-direction:column;gap:12px;padding-bottom:32px"></div>
+    <div id="history-list" style="padding:16px;display:flex;flex-direction:column;gap:12px;padding-bottom:90px"></div>
+    <div class="tab-bar">
+      <button class="tab-btn" id="tab-reports-2" onclick="switchTab('reports')">
+        <span class="tab-icon">🏠</span> Reports
+      </button>
+      <button class="tab-btn active" id="tab-history-2" onclick="switchTab('history')">
+        <span class="tab-icon">📋</span> History
+      </button>
+    </div>
   </div>
 
   <!-- ── Screen 3: Report Form ── -->
@@ -1241,26 +1286,26 @@ document.getElementById('btn-submit').addEventListener('click', async () => {
 
 // ── History ───────────────────────────────────────────────────────────────────
 
-document.getElementById('btn-history').addEventListener('click', () => {
-  loadHistory();
-  showScreen('screen-history');
-});
-
-document.getElementById('btn-back-history').addEventListener('click', () => {
-  showScreen('screen-properties');
-});
+function switchTab(tab) {
+  if (tab === 'history') {
+    loadHistory();
+    showScreen('screen-history');
+  } else {
+    showScreen('screen-properties');
+  }
+}
 
 async function loadHistory() {
   const list = document.getElementById('history-list');
   list.innerHTML = '<div class="history-empty">Loading…</div>';
-  document.getElementById('history-subtitle').textContent = `${state.cleanerName}'s recent reports`;
+  document.getElementById('history-subtitle').textContent = `${state.cleanerName} — recent reports`;
 
   try {
     const res = await fetch(`/history?cleaner=${encodeURIComponent(state.cleanerName)}`);
     const data = await res.json();
 
     if (!data.success || !data.reports.length) {
-      list.innerHTML = '<div class="history-empty">No reports submitted yet.</div>';
+      list.innerHTML = '<div class="history-empty">No reports found.<br>Submit your first report to see it here.</div>';
       return;
     }
 
@@ -1269,34 +1314,44 @@ async function loadHistory() {
       const card = document.createElement('div');
       card.className = 'history-card';
 
-      const date = r.submitted_at || 'Unknown date';
+      // Format date nicely
+      let dateStr = r.submitted_at || '';
+      try {
+        const d = new Date(r.submitted_at);
+        if (!isNaN(d)) {
+          dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            + ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        }
+      } catch(e) { dateStr = r.submitted_at; }
+
       let badges = '';
       if (r.fully_stocked) {
         badges += '<span class="hbadge hbadge-ok">✅ Fully Stocked</span>';
       } else if (r.supplies_flagged) {
-        const hasOut = r.supplies_flagged.includes('Completely Out');
-        const hasLow = r.supplies_flagged.includes('Running Low');
-        if (hasOut) badges += '<span class="hbadge hbadge-out">🔴 Items Out</span>';
-        if (hasLow) badges += '<span class="hbadge hbadge-warn">⚠️ Items Low</span>';
+        if (r.supplies_flagged.includes('Completely Out')) badges += '<span class="hbadge hbadge-out">🔴 Items Out</span>';
+        if (r.supplies_flagged.includes('Running Low'))   badges += '<span class="hbadge hbadge-warn">⚠️ Running Low</span>';
       } else {
-        badges += '<span class="hbadge hbadge-ok">✅ Fully Stocked</span>';
+        badges += '<span class="hbadge hbadge-ok">✅ No Issues</span>';
       }
-      if (r.damage_notes) badges += '<span class="hbadge hbadge-dmg">⚠️ Damage Reported</span>';
+      if (r.damage_notes) badges += '<span class="hbadge hbadge-dmg">⚠️ Damage Noted</span>';
       if (r.photo_count)  badges += `<span class="hbadge hbadge-pic">📷 ${r.photo_count} photo${r.photo_count > 1 ? 's' : ''}</span>`;
 
+      const flaggedSection = r.supplies_flagged && !r.fully_stocked
+        ? `<div class="history-damage" style="margin-top:8px;padding-top:8px;border-top:1px solid #F3F4F6;font-size:12px"><strong>Flagged:</strong> ${r.supplies_flagged}</div>` : '';
       const dmgSection = r.damage_notes
         ? `<div class="history-damage">"${r.damage_notes}"</div>` : '';
 
       card.innerHTML = `
         <div class="history-card-prop">${r.property}</div>
-        <div class="history-card-meta">${date} · ${r.cleaner}</div>
+        <div class="history-card-meta">🕐 ${dateStr}</div>
         <div class="history-badges">${badges}</div>
+        ${flaggedSection}
         ${dmgSection}
       `;
       list.appendChild(card);
     });
   } catch (e) {
-    list.innerHTML = '<div class="history-empty">Could not load history. Try again.</div>';
+    list.innerHTML = '<div class="history-empty">Could not load history. Check your connection.</div>';
   }
 }
 
