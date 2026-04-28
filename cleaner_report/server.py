@@ -187,7 +187,7 @@ def _get_property_manager(property_name):
         if not records:
             return {}
         fields = records[0]["fields"]
-        manager_ids = fields.get("Property Manager", [])
+        manager_ids = fields.get("Property Managers", [])
         if not manager_ids:
             return {}
         mgr = table("Property Managers").get(manager_ids[0])
