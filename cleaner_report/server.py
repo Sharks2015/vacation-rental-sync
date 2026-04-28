@@ -137,6 +137,51 @@ def submit_report():
     return jsonify({"success": True})
 
 
+MANAGER_PIN = os.getenv("MANAGER_PIN", "")
+
+
+@app.route("/manager")
+def manager_dashboard():
+    return send_from_directory(BASEDIR, "manager.html")
+
+
+@app.route("/manager-verify", methods=["POST"])
+def manager_verify():
+    data = request.get_json() or {}
+    pin = str(data.get("pin", "")).strip()
+    if not MANAGER_PIN:
+        return jsonify({"success": False, "error": "Not configured"}), 500
+    if pin != MANAGER_PIN:
+        return jsonify({"success": False, "error": "Invalid PIN"}), 401
+    return jsonify({"success": True})
+
+
+@app.route("/manager-reports", methods=["GET"])
+def manager_reports():
+    try:
+        records = table("Cleaning Reports").all()
+        reports = []
+        properties = set()
+        for r in sorted(records, key=lambda x: x["fields"].get("Submitted At", ""), reverse=True):
+            f = r["fields"]
+            prop = f.get("Property", "")
+            if prop:
+                properties.add(prop)
+            reports.append({
+                "property": prop,
+                "cleaner": f.get("Cleaner Name", ""),
+                "submitted_at": f.get("Submitted At", ""),
+                "fully_stocked": f.get("Fully Stocked", False),
+                "supplies_flagged": f.get("Supplies Flagged", ""),
+                "damage_notes": f.get("Damage Notes", ""),
+                "photo_count": f.get("Photo Count", 0),
+            })
+        return jsonify({"success": True, "reports": reports, "properties": sorted(properties)})
+    except Exception as e:
+        print(f"Manager reports error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @app.route("/history", methods=["GET"])
 def get_history():
     cleaner_name = request.args.get("cleaner", "")

@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manager Dashboard — Paradise Shine Cleaning</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F3F4F6; color: #1F2937; min-height: 100vh; }
+
+    /* LOGIN */
+    #login-screen {
+      min-height: 100vh;
+      background: #1B3A6B;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .login-card {
+      background: white;
+      border-radius: 16px;
+      padding: 40px 32px;
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    .login-logo { font-size: 36px; margin-bottom: 16px; }
+    .login-card h1 { color: #1B3A6B; font-size: 20px; font-weight: 700; }
+    .login-card p { color: #6B7280; font-size: 14px; margin: 6px 0 28px; }
+    .pin-input {
+      width: 100%;
+      padding: 14px;
+      font-size: 28px;
+      text-align: center;
+      letter-spacing: 10px;
+      border: 2px solid #E5E7EB;
+      border-radius: 10px;
+      margin-bottom: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .pin-input:focus { border-color: #1B3A6B; }
+    .btn-login {
+      width: 100%;
+      padding: 14px;
+      background: #1B3A6B;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-login:hover { background: #152d54; }
+    .login-error { color: #EF4444; font-size: 13px; margin-top: 12px; min-height: 20px; }
+
+    /* DASHBOARD */
+    #dashboard-screen { display: none; }
+
+    header {
+      background: #1B3A6B;
+      color: white;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .header-left h1 { font-size: 18px; font-weight: 700; }
+    .header-left p { font-size: 12px; color: #BFDBFE; margin-top: 2px; }
+    .btn-logout {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.2s;
+    }
+    .btn-logout:hover { background: rgba(255,255,255,0.25); }
+
+    .stats-bar {
+      background: white;
+      border-bottom: 1px solid #E5E7EB;
+      padding: 20px 24px;
+      display: flex;
+      gap: 0;
+    }
+    .stat {
+      flex: 1;
+      text-align: center;
+      padding: 0 12px;
+      border-right: 1px solid #E5E7EB;
+    }
+    .stat:last-child { border-right: none; }
+    .stat-value { font-size: 28px; font-weight: 700; color: #1B3A6B; line-height: 1; }
+    .stat-value.red { color: #EF4444; }
+    .stat-value.amber { color: #F59E0B; }
+    .stat-label { font-size: 11px; color: #9CA3AF; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .filters {
+      background: white;
+      padding: 14px 24px;
+      border-bottom: 1px solid #E5E7EB;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+    .filter-group label { font-size: 11px; color: #6B7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .filter-group select,
+    .filter-group input[type="date"] {
+      padding: 8px 10px;
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+      background: white;
+      color: #1F2937;
+      transition: border-color 0.2s;
+    }
+    .filter-group select:focus,
+    .filter-group input[type="date"]:focus { border-color: #1B3A6B; }
+    .btn-clear {
+      padding: 8px 14px;
+      background: #F3F4F6;
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      color: #6B7280;
+      align-self: flex-end;
+    }
+    .btn-clear:hover { background: #E5E7EB; }
+
+    .reports-container {
+      padding: 20px 24px;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+    .reports-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .reports-count { color: #6B7280; font-size: 13px; }
+    .refresh-btn {
+      font-size: 13px;
+      color: #1B3A6B;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .refresh-btn:hover { text-decoration: underline; }
+
+    .report-card {
+      background: white;
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+      border-left: 4px solid #D1FAE5;
+    }
+    .report-card.has-damage { border-left-color: #EF4444; }
+    .report-card.has-supply { border-left-color: #F59E0B; }
+    .report-card.has-damage.has-supply { border-left-color: #EF4444; }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+    .property-name { font-size: 15px; font-weight: 700; color: #1B3A6B; }
+    .cleaner-line { font-size: 12px; color: #9CA3AF; margin-top: 3px; }
+    .submitted-at { font-size: 12px; color: #9CA3AF; text-align: right; flex-shrink: 0; margin-left: 12px; white-space: nowrap; }
+
+    .supply-row { margin-bottom: 8px; }
+    .fully-stocked-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #ECFDF5;
+      color: #059669;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .supply-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+    .supply-tag {
+      font-size: 11px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-weight: 500;
+    }
+    .supply-tag.out { background: #FEE2E2; color: #B91C1C; }
+    .supply-tag.low { background: #FEF3C7; color: #92400E; }
+
+    .damage-box {
+      background: #FEF2F2;
+      border-left: 3px solid #EF4444;
+      border-radius: 4px;
+      padding: 8px 12px;
+      margin-top: 8px;
+      font-size: 13px;
+      color: #374151;
+    }
+    .damage-box strong { color: #B91C1C; display: block; margin-bottom: 3px; font-size: 12px; }
+
+    .card-footer {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #F3F4F6;
+      display: flex;
+      gap: 14px;
+    }
+    .footer-pill {
+      font-size: 12px;
+      color: #6B7280;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .footer-pill.blue { color: #3B82F6; }
+
+    .empty-state { text-align: center; padding: 60px 24px; color: #9CA3AF; }
+    .empty-state .icon { font-size: 40px; margin-bottom: 10px; }
+    .loading { text-align: center; padding: 60px; color: #9CA3AF; font-size: 14px; }
+
+    @media (max-width: 600px) {
+      .stats-bar { gap: 0; }
+      .stat-value { font-size: 22px; }
+      .filters { flex-direction: column; }
+      .filter-group select,
+      .filter-group input[type="date"],
+      .btn-clear { width: 100%; }
+      .reports-container { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">🧹</div>
+    <h1>Paradise Shine Cleaning</h1>
+    <p>Manager Dashboard</p>
+    <input type="password" id="pin-input" class="pin-input" placeholder="••••" maxlength="12" autocomplete="off">
+    <button class="btn-login" onclick="login()">Sign In</button>
+    <div id="login-error" class="login-error"></div>
+  </div>
+</div>
+
+<div id="dashboard-screen">
+  <header>
+    <div class="header-left">
+      <h1>Manager Dashboard</h1>
+      <p>Paradise Shine Cleaning</p>
+    </div>
+    <button class="btn-logout" onclick="logout()">Sign Out</button>
+  </header>
+
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="stat-value" id="stat-total">—</div>
+      <div class="stat-label">All Reports</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" id="stat-today">—</div>
+      <div class="stat-label">Today</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value amber" id="stat-supply">—</div>
+      <div class="stat-label">Supply Issues</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value red" id="stat-damage">—</div>
+      <div class="stat-label">Damage Reports</div>
+    </div>
+  </div>
+
+  <div class="filters">
+    <div class="filter-group">
+      <label>Property</label>
+      <select id="f-property" onchange="applyFilters()">
+        <option value="">All Properties</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>From</label>
+      <input type="date" id="f-from" onchange="applyFilters()">
+    </div>
+    <div class="filter-group">
+      <label>To</label>
+      <input type="date" id="f-to" onchange="applyFilters()">
+    </div>
+    <div class="filter-group">
+      <label>Status</label>
+      <select id="f-status" onchange="applyFilters()">
+        <option value="">All</option>
+        <option value="damage">Has Damage</option>
+        <option value="supply">Supply Issues</option>
+        <option value="ok">Fully Stocked</option>
+      </select>
+    </div>
+    <button class="btn-clear" onclick="clearFilters()">Clear</button>
+  </div>
+
+  <div class="reports-container">
+    <div class="reports-meta">
+      <div id="reports-count" class="reports-count"></div>
+      <button class="refresh-btn" onclick="loadReports()">↻ Refresh</button>
+    </div>
+    <div id="reports-list"><div class="loading">Loading reports...</div></div>
+  </div>
+</div>
+
+<script>
+let allReports = [];
+
+document.getElementById('pin-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') login();
+});
+
+async function login() {
+  const pin = document.getElementById('pin-input').value.trim();
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+  if (!pin) { errEl.textContent = 'Enter your PIN'; return; }
+  try {
+    const res = await fetch('/manager-verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin })
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('dashboard-screen').style.display = 'block';
+      loadReports();
+    } else {
+      errEl.textContent = 'Invalid PIN. Try again.';
+      document.getElementById('pin-input').value = '';
+    }
+  } catch {
+    errEl.textContent = 'Connection error. Try again.';
+  }
+}
+
+function logout() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('dashboard-screen').style.display = 'none';
+  document.getElementById('pin-input').value = '';
+  document.getElementById('login-error').textContent = '';
+  allReports = [];
+}
+
+async function loadReports() {
+  document.getElementById('reports-list').innerHTML = '<div class="loading">Loading reports...</div>';
+  try {
+    const res = await fetch('/manager-reports');
+    const data = await res.json();
+    if (!data.success) {
+      document.getElementById('reports-list').innerHTML = '<div class="loading">Failed to load reports.</div>';
+      return;
+    }
+    allReports = data.reports;
+
+    const sel = document.getElementById('f-property');
+    sel.innerHTML = '<option value="">All Properties</option>';
+    data.properties.forEach(p => {
+      const o = document.createElement('option');
+      o.value = p; o.textContent = p;
+      sel.appendChild(o);
+    });
+
+    updateStats(allReports);
+    renderReports(allReports);
+  } catch {
+    document.getElementById('reports-list').innerHTML = '<div class="loading">Error loading reports.</div>';
+  }
+}
+
+function applyFilters() {
+  const prop = document.getElementById('f-property').value;
+  const from = document.getElementById('f-from').value;
+  const to = document.getElementById('f-to').value;
+  const status = document.getElementById('f-status').value;
+
+  const filtered = allReports.filter(r => {
+    if (prop && r.property !== prop) return false;
+    if (from && r.submitted_at < from) return false;
+    if (to && r.submitted_at > to + ' 99:99') return false;
+    if (status === 'damage' && !r.damage_notes) return false;
+    if (status === 'supply' && (r.fully_stocked || !r.supplies_flagged)) return false;
+    if (status === 'ok' && !r.fully_stocked) return false;
+    return true;
+  });
+
+  renderReports(filtered);
+}
+
+function clearFilters() {
+  document.getElementById('f-property').value = '';
+  document.getElementById('f-from').value = '';
+  document.getElementById('f-to').value = '';
+  document.getElementById('f-status').value = '';
+  renderReports(allReports);
+}
+
+function updateStats(reports) {
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('stat-total').textContent = reports.length;
+  document.getElementById('stat-today').textContent = reports.filter(r => r.submitted_at && r.submitted_at.startsWith(today)).length;
+  document.getElementById('stat-supply').textContent = reports.filter(r => !r.fully_stocked && r.supplies_flagged).length;
+  document.getElementById('stat-damage').textContent = reports.filter(r => r.damage_notes).length;
+}
+
+function fmtDate(str) {
+  if (!str) return '';
+  try {
+    return new Date(str.replace(' ', 'T')).toLocaleString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: 'numeric', minute: '2-digit', hour12: true
+    });
+  } catch { return str; }
+}
+
+function renderReports(reports) {
+  document.getElementById('reports-count').textContent =
+    `${reports.length} report${reports.length !== 1 ? 's' : ''}`;
+
+  if (!reports.length) {
+    document.getElementById('reports-list').innerHTML =
+      '<div class="empty-state"><div class="icon">📋</div><p>No reports found</p></div>';
+    return;
+  }
+
+  document.getElementById('reports-list').innerHTML = reports.map(r => {
+    const hasDamage = !!r.damage_notes;
+    const hasSupply = !r.fully_stocked && !!r.supplies_flagged;
+    const cardClass = [hasDamage ? 'has-damage' : '', hasSupply ? 'has-supply' : ''].join(' ');
+
+    let supplyHtml = '';
+    if (r.fully_stocked) {
+      supplyHtml = '<span class="fully-stocked-tag">✅ Fully Stocked</span>';
+    } else if (r.supplies_flagged) {
+      const tags = r.supplies_flagged.split(', ').map(item => {
+        const isOut = item.includes('Completely Out') || item.includes('🔴');
+        return `<span class="supply-tag ${isOut ? 'out' : 'low'}">${item}</span>`;
+      }).join('');
+      supplyHtml = `<div class="supply-tags">${tags}</div>`;
+    }
+
+    const damageHtml = hasDamage
+      ? `<div class="damage-box"><strong>⚠️ Damages, Smells & Stains</strong>${r.damage_notes}</div>`
+      : '';
+
+    const footerItems = [];
+    if (r.photo_count > 0)
+      footerItems.push(`<span class="footer-pill blue">📷 ${r.photo_count} photo${r.photo_count !== 1 ? 's' : ''} — see email</span>`);
+
+    const footer = footerItems.length
+      ? `<div class="card-footer">${footerItems.join('')}</div>`
+      : '';
+
+    return `
+      <div class="report-card ${cardClass}">
+        <div class="card-top">
+          <div>
+            <div class="property-name">${r.property || '—'}</div>
+            <div class="cleaner-line">👤 ${r.cleaner || '—'}</div>
+          </div>
+          <div class="submitted-at">${fmtDate(r.submitted_at)}</div>
+        </div>
+        <div class="supply-row">${supplyHtml}</div>
+        ${damageHtml}
+        ${footer}
+      </div>`;
+  }).join('');
+}
+</script>
+</body>
+</html>
