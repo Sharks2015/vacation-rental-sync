@@ -192,10 +192,12 @@ def _get_property_manager(property_name):
             return {}
         mgr = table("Property Managers").get(manager_ids[0])
         f = mgr["fields"]
+        cc_phone = fields.get("CC Phone", "")
         return {
             "name": f.get("Name", ""),
             "email": f.get("Email", ""),
             "phone": f.get("Phone", ""),
+            "cc_phone": cc_phone,
         }
     except Exception as e:
         print(f"Manager lookup error: {e}")
@@ -332,6 +334,7 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
         "manager_name": manager.get("name", ""),
         "manager_email": manager.get("email", ""),
         "manager_phone": manager.get("phone", ""),
+        "cc_phone": manager.get("cc_phone", ""),
         "supplies_summary": supply_summary,
         "submitted_at": datetime.now().isoformat(),
     }
