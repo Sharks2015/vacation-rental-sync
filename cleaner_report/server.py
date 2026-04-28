@@ -167,15 +167,18 @@ def _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_no
         f"{SUPPLY_LABELS.get(k, k)}: {STATUS_LABELS.get(v, v)}"
         for k, v in supplies.items() if v
     )
-    table("Cleaning Reports").create({
+    record = {
         "Property": property_name,
         "Cleaner Name": cleaner_name,
         "Submitted At": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "Fully Stocked": fully_stocked,
-        "Supplies Flagged": flagged,
-        "Damage Notes": damage_notes,
         "Photo Count": len([p for p in photos if p]),
-    })
+    }
+    if flagged:
+        record["Supplies Flagged"] = flagged
+    if damage_notes:
+        record["Damage Notes"] = damage_notes
+    table("Cleaning Reports").create(record)
 
 
 def _get_property_manager(property_name):
