@@ -327,18 +327,27 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
         f"{SUPPLY_LABELS.get(k, k)}: {STATUS_LABELS.get(v, v)}"
         for k, v in supplies.items() if v
     ) or "No issues"
-    payload = {
+    base = {
         "cleaner_name": cleaner_name,
         "property_name": property_name,
         "damage_notes": damage_notes,
-        "manager_name": manager.get("name", ""),
-        "manager_email": manager.get("email", ""),
-        "manager_phone": manager.get("phone", ""),
-        "cc_phone": manager.get("cc_phone", ""),
         "supplies_summary": supply_summary,
         "submitted_at": datetime.now().isoformat(),
     }
-    requests.post(GHL_WEBHOOK_URL, json=payload, timeout=10)
+    # Primary manager
+    requests.post(GHL_WEBHOOK_URL, json={**base,
+        "manager_name": manager.get("name", ""),
+        "manager_email": manager.get("email", ""),
+        "manager_phone": manager.get("phone", ""),
+    }, timeout=10)
+    # CC recipient (e.g. Jeanine) — send a second webhook so GHL creates their contact and texts them
+    cc_phone = manager.get("cc_phone", "")
+    if cc_phone:
+        requests.post(GHL_WEBHOOK_URL, json={**base,
+            "manager_name": "CC",
+            "manager_email": "",
+            "manager_phone": cc_phone,
+        }, timeout=10)
 
 
 if __name__ == "__main__":
