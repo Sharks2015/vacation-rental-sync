@@ -538,6 +538,122 @@
     }
     .disclaimer p:last-child { margin-bottom: 0; }
 
+    /* Severity buttons */
+    .severity-row { display: flex; gap: 8px; padding: 12px 16px 16px; }
+    .severity-btn {
+      flex: 1;
+      padding: 13px 6px;
+      border-radius: 12px;
+      border: 2px solid #E5E7EB;
+      background: white;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .severity-btn.sel-minor  { background: #ECFDF5; border-color: #10B981; color: #065F46; }
+    .severity-btn.sel-medium { background: #FEF3C7; border-color: #F59E0B; color: #92400E; }
+    .severity-btn.sel-urgent { background: #FEE2E2; border-color: #EF4444; color: #B91C1C; }
+
+    /* Smell buttons */
+    .smell-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding: 12px 16px 16px;
+    }
+    .smell-btn {
+      padding: 12px 6px;
+      border-radius: 12px;
+      border: 2px solid #E5E7EB;
+      background: white;
+      font-size: 12px;
+      font-weight: 600;
+      color: #6B7280;
+      cursor: pointer;
+      text-align: center;
+      line-height: 1.3;
+      transition: all 0.12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .smell-btn .smell-emoji { font-size: 24px; display: block; margin-bottom: 4px; }
+    .smell-btn.selected { background: #FFF7ED; border-color: #F97316; color: #C2410C; }
+    .smell-btn:active { opacity: 0.7; }
+
+    /* Stain section */
+    .stain-entry {
+      border: 1.5px solid #E5E7EB;
+      border-radius: 12px;
+      padding: 12px;
+      margin: 0 16px 12px;
+      position: relative;
+    }
+    .stain-section-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #9CA3AF;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+      margin-top: 6px;
+    }
+    .stain-type-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+    .stain-type-btn {
+      padding: 7px 12px;
+      border-radius: 20px;
+      border: 1.5px solid #E5E7EB;
+      background: white;
+      font-size: 13px;
+      font-weight: 600;
+      color: #6B7280;
+      cursor: pointer;
+      transition: all 0.12s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .stain-type-btn.sel-towel { background: #EFF6FF; border-color: #3B82F6; color: #1D4ED8; }
+    .stain-type-btn.sel-stain { background: #FDF4FF; border-color: #A855F7; color: #7E22CE; }
+    .stain-nowash {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 13px;
+      color: #374151;
+    }
+    .stain-nowash input { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
+    .btn-add-stain {
+      margin: 4px 16px 16px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 2px dashed #D1D5DB;
+      background: transparent;
+      color: var(--primary);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      width: calc(100% - 32px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-add-stain:active { background: var(--primary-light); }
+    .btn-remove-stain {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: none;
+      border: none;
+      color: #9CA3AF;
+      font-size: 20px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0;
+    }
+
     /* History */
     .history-btn {
       margin: 0 16px 4px;
@@ -818,20 +934,47 @@
         <div id="supplies-content"></div>
       </div>
 
-      <!-- Damages, Smells & Stains -->
+      <!-- Damage Report -->
       <div class="card">
-        <div class="card-title">⚠️ Damages, Smells &amp; Stains</div>
-        <textarea class="damage-textarea" id="damage-notes"
-          placeholder="Describe any damage, bad smells, or stained items…"></textarea>
+        <div class="card-title">🚨 Damage Report</div>
+        <div class="severity-row">
+          <button class="severity-btn" data-sev="minor">🟢 Minor</button>
+          <button class="severity-btn" data-sev="medium">🟡 Medium</button>
+          <button class="severity-btn" data-sev="urgent">🔴 Urgent</button>
+        </div>
+        <textarea class="damage-textarea" id="damage-text"
+          placeholder="Describe damage (broken items, missing items, guest-caused damage)…"></textarea>
+      </div>
+
+      <!-- Smell Report -->
+      <div class="card">
+        <div class="card-title">👃 Smell Report</div>
+        <div class="smell-grid">
+          <button class="smell-btn" data-smell="smoke"><span class="smell-emoji">🚬</span>Smoke</button>
+          <button class="smell-btn" data-smell="weed"><span class="smell-emoji">🌿</span>Weed</button>
+          <button class="smell-btn" data-smell="trash"><span class="smell-emoji">🗑️</span>Trash</button>
+          <button class="smell-btn" data-smell="pet"><span class="smell-emoji">🐾</span>Pet</button>
+          <button class="smell-btn" data-smell="sewage"><span class="smell-emoji">💧</span>Sewage</button>
+          <button class="smell-btn" data-smell="other"><span class="smell-emoji">❓</span>Other</button>
+        </div>
+        <textarea class="damage-textarea" id="smell-notes"
+          placeholder="Optional: additional smell details…" style="min-height:70px;padding-top:0"></textarea>
+      </div>
+
+      <!-- Stain Report -->
+      <div class="card">
+        <div class="card-title">🧺 Stain Report</div>
+        <div id="stains-list"></div>
+        <button class="btn-add-stain" id="btn-add-stain">+ Add Stained Item</button>
         <div class="disclaimer">
-          <p>Report damaged items, bad smells upon arrival, and stained towels or bed sheets after laundry is complete. Please specify towel size or bed sheet size needed for replacement. Only report stains that do not come off after washing.</p>
-          <p>Reporte artículos dañados, malos olores al llegar, y toallas o sábanas manchadas después de terminar la lavandería. Por favor especifique el tamaño de la toalla o sábana que necesita reemplazo. Solo reporte manchas que no salgan después del lavado.</p>
+          <p>Only report stains that did not come off after washing.</p>
+          <p>Solo reporte manchas que no salieron después del lavado.</p>
         </div>
       </div>
 
       <!-- Photos -->
       <div class="card">
-        <div class="card-title">📷 Photos</div>
+        <div class="card-title">📷 Photos <span id="photo-required-badge" style="display:none;font-size:12px;color:#EF4444;font-weight:500">— Required for damage &amp; stains</span></div>
         <input type="file" id="photo-input" accept="image/*" multiple style="display:none">
         <button class="photo-add-btn" id="photo-add-btn">
           <span>+</span> Add Photos
@@ -948,6 +1091,18 @@ const PROPERTY_SUPPLIES = {
   '126 NW 6th Ave Delray Beach':           { grouped: true,  groups: TDANNA_GROUPS },
 };
 
+const SMELL_LABELS = {
+  smoke: 'Smoke', weed: 'Weed', trash: 'Trash',
+  pet: 'Pet Odor', sewage: 'Sewage/Plumbing', other: 'Other',
+};
+const TOWEL_LABELS = {
+  bath: 'Bath Towel', hand: 'Hand Towel', face: 'Face Towel',
+  pool: 'Pool Towel', kitchen: 'Kitchen Towel',
+};
+const STAIN_LABELS = {
+  makeup: 'Makeup', blood: 'Blood', bleach: 'Bleach', unknown: 'Unknown', other: 'Other',
+};
+
 // ── State ─────────────────────────────────────────────────────────────────────
 
 const state = {
@@ -955,10 +1110,12 @@ const state = {
   cleanerName: '',
   properties: [],
   selectedProperty: null,
-  supplies: {},       // {key: 'running_low' | 'completely_out' | null}
+  supplies: {},
   fullyStocked: false,
   photos: [],
-  damageNotes: '',
+  damageSeverity: null,
+  smells: [],
+  stains: [],
 };
 
 // ── Screen management ─────────────────────────────────────────────────────────
@@ -1077,12 +1234,19 @@ function openReport(propName) {
   state.supplies = {};
   state.fullyStocked = false;
   state.photos = [];
-  state.damageNotes = '';
-  document.getElementById('damage-notes').value = '';
+  state.damageSeverity = null;
+  state.smells = [];
+  state.stains = [];
+  stainCounter = 0;
+  document.getElementById('damage-text').value = '';
+  document.getElementById('smell-notes').value = '';
+  document.getElementById('stains-list').innerHTML = '';
   document.getElementById('photo-grid').innerHTML = '';
   document.getElementById('photo-input').value = '';
   document.getElementById('report-prop-name').textContent = propName;
-  // Reset fully stocked button
+  document.getElementById('photo-required-badge').style.display = 'none';
+  document.querySelectorAll('.severity-btn').forEach(b => b.className = 'severity-btn');
+  document.querySelectorAll('.smell-btn').forEach(b => b.classList.remove('selected'));
   const fsBtn = document.getElementById('fully-stocked-btn');
   fsBtn.classList.remove('selected');
   document.getElementById('fs-check').textContent = '';
@@ -1225,6 +1389,97 @@ function resizeImage(file, maxW, quality) {
   });
 }
 
+// ── Severity ──────────────────────────────────────────────────────────────────
+
+document.querySelector('.severity-row').addEventListener('click', e => {
+  const btn = e.target.closest('.severity-btn');
+  if (!btn) return;
+  const sev = btn.dataset.sev;
+  state.damageSeverity = (state.damageSeverity === sev) ? null : sev;
+  document.querySelectorAll('.severity-btn').forEach(b => {
+    b.className = 'severity-btn' + (b.dataset.sev === state.damageSeverity ? ` sel-${state.damageSeverity}` : '');
+  });
+});
+
+// ── Smells ────────────────────────────────────────────────────────────────────
+
+document.querySelector('.smell-grid').addEventListener('click', e => {
+  const btn = e.target.closest('.smell-btn');
+  if (!btn) return;
+  const smell = btn.dataset.smell;
+  const idx = state.smells.indexOf(smell);
+  if (idx >= 0) {
+    state.smells.splice(idx, 1);
+    btn.classList.remove('selected');
+  } else {
+    state.smells.push(smell);
+    btn.classList.add('selected');
+  }
+});
+
+// ── Stains ────────────────────────────────────────────────────────────────────
+
+let stainCounter = 0;
+
+function addStainEntry() {
+  const id = stainCounter++;
+  state.stains.push({ id, towel: null, stain: null, noWash: false });
+  const entry = document.createElement('div');
+  entry.className = 'stain-entry';
+  entry.id = `stain-${id}`;
+  entry.innerHTML = `
+    <button class="btn-remove-stain" onclick="removeStain(${id})">×</button>
+    <div class="stain-section-label">Towel / Linen Type</div>
+    <div class="stain-type-grid" id="towel-${id}">
+      ${['bath','hand','face','pool','kitchen'].map(t =>
+        `<button class="stain-type-btn" data-id="${id}" data-towel="${t}">${TOWEL_LABELS[t]}</button>`
+      ).join('')}
+    </div>
+    <div class="stain-section-label">Stain Type</div>
+    <div class="stain-type-grid" id="staintype-${id}">
+      ${['makeup','blood','bleach','unknown','other'].map(s =>
+        `<button class="stain-type-btn" data-id="${id}" data-stain="${s}">${STAIN_LABELS[s]}</button>`
+      ).join('')}
+    </div>
+    <label class="stain-nowash">
+      <input type="checkbox" id="nowash-${id}" onchange="toggleNoWash(${id}, this.checked)">
+      Did not come off after washing
+    </label>
+  `;
+  document.getElementById('stains-list').appendChild(entry);
+}
+
+function removeStain(id) {
+  const idx = state.stains.findIndex(s => s.id === id);
+  if (idx >= 0) state.stains.splice(idx, 1);
+  document.getElementById(`stain-${id}`)?.remove();
+}
+
+function toggleNoWash(id, checked) {
+  const s = state.stains.find(s => s.id === id);
+  if (s) s.noWash = checked;
+}
+
+document.getElementById('btn-add-stain').addEventListener('click', addStainEntry);
+
+document.getElementById('stains-list').addEventListener('click', e => {
+  const btn = e.target.closest('.stain-type-btn');
+  if (!btn) return;
+  const id = parseInt(btn.dataset.id, 10);
+  const s = state.stains.find(s => s.id === id);
+  if (!s) return;
+  if (btn.dataset.towel !== undefined) {
+    s.towel = (s.towel === btn.dataset.towel) ? null : btn.dataset.towel;
+    document.querySelectorAll(`#towel-${id} .stain-type-btn`).forEach(b =>
+      b.classList.toggle('sel-towel', b.dataset.towel === s.towel));
+  }
+  if (btn.dataset.stain !== undefined) {
+    s.stain = (s.stain === btn.dataset.stain) ? null : btn.dataset.stain;
+    document.querySelectorAll(`#staintype-${id} .stain-type-btn`).forEach(b =>
+      b.classList.toggle('sel-stain', b.dataset.stain === s.stain));
+  }
+});
+
 // ── Toast ─────────────────────────────────────────────────────────────────────
 
 function showToast(msg) {
@@ -1238,12 +1493,38 @@ function showToast(msg) {
 
 // ── Submit ────────────────────────────────────────────────────────────────────
 
-document.getElementById('btn-submit').addEventListener('click', async () => {
-  const damageNotes = document.getElementById('damage-notes').value.trim();
+function buildDamageNotes() {
+  const parts = [];
+  const damageText = document.getElementById('damage-text').value.trim();
+  if (state.damageSeverity || damageText) {
+    const sev = state.damageSeverity ? `[${state.damageSeverity.toUpperCase()}] ` : '';
+    parts.push(`🚨 DAMAGE ${sev}${damageText}`);
+  }
+  const smellNotes = document.getElementById('smell-notes').value.trim();
+  if (state.smells.length > 0 || smellNotes) {
+    let part = `👃 SMELL: ${state.smells.map(s => SMELL_LABELS[s]).join(', ') || 'Other'}`;
+    if (smellNotes) part += ` — ${smellNotes}`;
+    parts.push(part);
+  }
+  if (state.stains.length > 0) {
+    const lines = state.stains.map(s => {
+      let line = `• ${TOWEL_LABELS[s.towel] || 'Unknown'} — ${STAIN_LABELS[s.stain] || 'Unknown'}`;
+      if (s.noWash) line += ' — Did not come off after wash';
+      return line;
+    }).join('\n');
+    parts.push(`🧺 STAINS:\n${lines}`);
+  }
+  return parts.join('\n\n');
+}
 
-  // Photos required if damage notes filled
-  if (damageNotes && state.photos.filter(Boolean).length === 0) {
-    showToast('📷 Photos required before submitting report.');
+document.getElementById('btn-submit').addEventListener('click', async () => {
+  const damageNotes = buildDamageNotes();
+  const damageText = document.getElementById('damage-text').value.trim();
+  const needsPhotos = !!(state.damageSeverity || damageText || state.stains.length > 0);
+
+  if (needsPhotos && state.photos.filter(Boolean).length === 0) {
+    document.getElementById('photo-required-badge').style.display = 'inline';
+    showToast('📷 Photos required for damage or stain reports.');
     return;
   }
 
