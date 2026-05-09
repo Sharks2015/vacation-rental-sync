@@ -1813,49 +1813,54 @@ function showToast(msg) {
 
 // ── Submit ────────────────────────────────────────────────────────────────────
 
-function buildDamageNotes() {
+function buildDamageSection() {
+  if (state.noDamage) return '';
+  const damageText = document.getElementById('damage-text').value.trim();
+  if (!state.damageSeverity && !damageText) return '';
+  const sev = state.damageSeverity ? `[${state.damageSeverity.toUpperCase()}] ` : '';
+  return `${sev}${damageText}`.trim();
+}
+
+function buildSmellSection() {
+  if (state.noSmell) return '';
+  const smellNotes = document.getElementById('smell-notes').value.trim();
+  if (!state.smells.length && !smellNotes) return '';
+  let part = state.smells.map(s => SMELL_LABELS[s]).join(', ') || 'Other';
+  if (smellNotes) part += ` — ${smellNotes}`;
+  return part;
+}
+
+function buildStainSection() {
+  if (state.noStain) return '';
   const parts = [];
-
-  if (!state.noDamage) {
-    const damageText = document.getElementById('damage-text').value.trim();
-    if (state.damageSeverity || damageText) {
-      const sev = state.damageSeverity ? `[${state.damageSeverity.toUpperCase()}] ` : '';
-      parts.push(`🚨 DAMAGE ${sev}${damageText}`);
-    }
+  const bedLines = [];
+  for (const [size, data] of Object.entries(state.bedSheets)) {
+    const items = [];
+    if (data.fitted > 0)  items.push(`Fitted Sheet ×${data.fitted}`);
+    if (data.flat > 0)    items.push(`Flat Sheet ×${data.flat}`);
+    if (data.duvet > 0)   items.push(`Duvet Cover ×${data.duvet}`);
+    if (data.pillows > 0) items.push(`Pillowcases ×${data.pillows}`);
+    if (items.length) bedLines.push(`${size.charAt(0).toUpperCase()+size.slice(1)}: ${items.join(', ')}`);
   }
-
-  if (!state.noSmell) {
-    const smellNotes = document.getElementById('smell-notes').value.trim();
-    if (state.smells.length > 0 || smellNotes) {
-      let part = `👃 SMELL: ${state.smells.map(s => SMELL_LABELS[s]).join(', ') || 'Other'}`;
-      if (smellNotes) part += ` — ${smellNotes}`;
-      parts.push(part);
-    }
-  }
-
-  if (!state.noStain) {
-    const bedLines = [];
-    for (const [size, data] of Object.entries(state.bedSheets)) {
-      const items = [];
-      if (data.fitted > 0)  items.push(`Fitted Sheet ×${data.fitted}`);
-      if (data.flat > 0)    items.push(`Flat Sheet ×${data.flat}`);
-      if (data.duvet > 0)   items.push(`Duvet Cover ×${data.duvet}`);
-      if (data.pillows > 0) items.push(`Pillowcases ×${data.pillows}`);
-      if (items.length) bedLines.push(`• ${size.charAt(0).toUpperCase()+size.slice(1)}: ${items.join(', ')}`);
-    }
-    if (bedLines.length) parts.push(`🛏️ BED SHEETS:\n${bedLines.join('\n')}`);
-
-    const towelLines = Object.entries(state.towels)
-      .filter(([, n]) => n > 0)
-      .map(([t, n]) => `• ${TOWEL_LABELS[t] || t}: ${n}`);
-    if (towelLines.length) parts.push(`🪣 TOWELS:\n${towelLines.join('\n')}`);
-  }
-
-  return parts.join('\n\n');
+  if (bedLines.length) parts.push(`Bed Sheets — ${bedLines.join(' | ')}`);
+  const towelLines = Object.entries(state.towels)
+    .filter(([, n]) => n > 0)
+    .map(([t, n]) => `${TOWEL_LABELS[t] || t}: ${n}`);
+  if (towelLines.length) parts.push(`Towels — ${towelLines.join(', ')}`);
+  return parts.join('\n');
 }
 
 document.getElementById('btn-submit').addEventListener('click', async () => {
-  const damageNotes = buildDamageNotes();
+  // Require photos if damage is reported
+  if (!state.noDamage) {
+    const damageText = document.getElementById('damage-text').value.trim();
+    const hasDamage = state.damageSeverity || damageText;
+    if (hasDamage && state.photos.length === 0) {
+      showToast('📷 Please add at least one photo to document the damage.');
+      document.getElementById('photo-add-btn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+  }
 
   const btn = document.getElementById('btn-submit');
   btn.disabled = true;
@@ -1874,7 +1879,9 @@ document.getElementById('btn-submit').addEventListener('click', async () => {
         property_name: state.selectedProperty,
         fully_stocked: state.fullyStocked,
         supplies: suppliesFiltered,
-        damage_notes: damageNotes,
+        damage_notes: buildDamageSection(),
+        smell_notes: buildSmellSection(),
+        stain_notes: buildStainSection(),
         photos: state.photos.filter(Boolean),
       }),
     });

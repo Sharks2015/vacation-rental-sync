@@ -122,6 +122,8 @@ def submit_report():
     fully_stocked = data.get("fully_stocked", False)
     supplies = data.get("supplies", {})
     damage_notes = data.get("damage_notes", "")
+    smell_notes = data.get("smell_notes", "")
+    stain_notes = data.get("stain_notes", "")
     photos = data.get("photos", [])
 
     def _process():
@@ -133,13 +135,14 @@ def submit_report():
         if GHL_WEBHOOK_URL:
             try:
                 _forward_to_ghl(cleaner_name, property_name, fully_stocked,
-                                supplies, damage_notes, manager, photo_urls)
+                                supplies, damage_notes, smell_notes, stain_notes,
+                                manager, photo_urls)
             except Exception as e:
                 print(f"GHL webhook error: {e}")
 
         try:
             _save_report(cleaner_name, property_name, fully_stocked,
-                         supplies, damage_notes, photo_urls)
+                         supplies, damage_notes, smell_notes, stain_notes, photo_urls)
         except Exception as e:
             print(f"Save report error: {e}")
 
@@ -282,11 +285,16 @@ def _upload_photos(photos, property_name):
 STATUS_LABELS = {"running_low": "⚠️ Running Low", "completely_out": "🔴 Completely Out"}
 
 
-def _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_notes, photo_urls):
+def _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_notes, smell_notes, stain_notes, photo_urls):
     flagged = "" if fully_stocked else ", ".join(
         f"{SUPPLY_LABELS.get(k, k)}: {STATUS_LABELS.get(v, v)}"
         for k, v in supplies.items() if v
     )
+    combined_notes = "\n\n".join(filter(None, [
+        f"DAMAGE: {damage_notes}" if damage_notes else "",
+        f"SMELL: {smell_notes}" if smell_notes else "",
+        f"STAINS:\n{stain_notes}" if stain_notes else "",
+    ]))
     record = {
         "Property": property_name,
         "Cleaner Name": cleaner_name,
@@ -296,8 +304,8 @@ def _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_no
     }
     if flagged:
         record["Supplies Flagged"] = flagged
-    if damage_notes:
-        record["Damage Notes"] = damage_notes
+    if combined_notes:
+        record["Damage Notes"] = combined_notes
     if photo_urls:
         record["Photos"] = [{"url": url} for url in photo_urls]
     table("Cleaning Reports").create(record)
@@ -330,7 +338,7 @@ def _get_property_manager(property_name):
         return {}
 
 
-def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage_notes, manager, photo_urls):
+def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage_notes, smell_notes, stain_notes, manager, photo_urls):
     supply_summary = "Fully stocked" if fully_stocked else ", ".join(
         f"{SUPPLY_LABELS.get(k, k)}: {STATUS_LABELS.get(v, v)}"
         for k, v in supplies.items() if v
@@ -347,7 +355,11 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
         f"Inventory: {supply_summary}",
     ]
     if damage_notes:
-        lines += ["", "Damages / Smells / Stains:", damage_notes]
+        lines += ["", "Damage:", damage_notes]
+    if smell_notes:
+        lines += ["", "Smell:", smell_notes]
+    if stain_notes:
+        lines += ["", "Stains:", stain_notes]
 
     photo_links = ""
     if photo_urls:
@@ -361,6 +373,8 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
         "cleaner_name": cleaner_name,
         "property_name": property_name,
         "damage_notes": damage_notes or "None",
+        "smell_notes": smell_notes or "None",
+        "stain_notes": stain_notes or "None",
         "supplies_summary": supply_summary,
         "report_body": report_body,
         "photo_links": photo_links or "No photos",
