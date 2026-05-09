@@ -229,23 +229,27 @@ def _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_no
 def _get_property_manager(property_name):
     try:
         records = table("Properties").all(formula=f"{{Name}}='{property_name}'")
+        print(f"[PM] '{property_name}' → {len(records)} record(s) found")
         if not records:
             return {}
         fields = records[0]["fields"]
         manager_ids = fields.get("Property Managers", [])
+        print(f"[PM] Manager IDs: {manager_ids}")
         if not manager_ids:
             return {}
         mgr = table("Property Managers").get(manager_ids[0])
         f = mgr["fields"]
+        email = (f.get("Email", "") or "").strip()
+        print(f"[PM] Found: {f.get('Name', '')} <{email}>")
         cc_phone = fields.get("CC Phone", "")
         return {
             "name": f.get("Name", ""),
-            "email": f.get("Email", ""),
+            "email": email,
             "phone": f.get("Phone", ""),
             "cc_phone": cc_phone,
         }
     except Exception as e:
-        print(f"Manager lookup error: {e}")
+        print(f"[PM] Lookup error: {e}")
         return {}
 
 
@@ -349,22 +353,21 @@ def _send_email(cleaner_name, property_name, fully_stocked, supplies, damage_not
     smtp_user = os.getenv("SMTP_USER", "")
     smtp_pass = os.getenv("SMTP_PASSWORD", "")
 
-    recipients = [NOTIFY_EMAIL]
+    manager_email = (manager.get("email", "") or "").strip() if manager else ""
+    print(f"[Email] To: {NOTIFY_EMAIL} | Cc: {manager_email or 'none'}")
 
-    manager_email = manager.get("email", "") if manager else ""
-    if manager_email and manager_email != NOTIFY_EMAIL:
-        recipients.append(manager_email)
+    msg = _build_email(
+        cleaner_name, property_name, fully_stocked, supplies,
+        damage_notes, photos, manager, NOTIFY_EMAIL, NOTIFY_EMAIL
+    )
+    if manager_email and manager_email.lower() != NOTIFY_EMAIL.lower():
+        msg["Cc"] = manager_email
 
     with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as s:
         s.starttls()
         s.login(smtp_user, smtp_pass)
-        for recipient in recipients:
-            msg = _build_email(
-                cleaner_name, property_name, fully_stocked, supplies,
-                damage_notes, photos, manager, recipient, recipient
-            )
-            s.send_message(msg)
-            print(f"Email sent to {recipient}")
+        s.send_message(msg)
+        print(f"[Email] Sent OK")
 
 
 def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage_notes, manager):
