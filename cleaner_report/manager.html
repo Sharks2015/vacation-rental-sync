@@ -432,7 +432,8 @@ function fmtDate(str) {
   try {
     return new Date(str.replace(' ', 'T')).toLocaleString('en-US', {
       month: 'short', day: 'numeric', year: 'numeric',
-      hour: 'numeric', minute: '2-digit', hour12: true
+      hour: 'numeric', minute: '2-digit', hour12: true,
+      timeZone: 'America/New_York'
     });
   } catch { return str; }
 }
@@ -463,8 +464,9 @@ function renderReports(reports) {
       supplyHtml = `<div class="supply-tags">${tags}</div>`;
     }
 
+    const dmgText = String(r.damage_notes || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>');
     const damageHtml = hasDamage
-      ? `<div class="damage-box"><strong>⚠️ Damages, Smells & Stains</strong>${r.damage_notes}</div>`
+      ? `<div class="damage-box"><strong>⚠️ Damages, Smells &amp; Stains</strong><div style="margin-top:4px">${dmgText}</div></div>`
       : '';
 
     const footerItems = [];

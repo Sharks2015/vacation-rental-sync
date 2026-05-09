@@ -6,6 +6,9 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 from datetime import datetime
+from zoneinfo import ZoneInfo
+
+_ET = ZoneInfo("America/New_York")
 
 import requests
 from dotenv import load_dotenv
@@ -215,7 +218,7 @@ def _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_no
     record = {
         "Property": property_name,
         "Cleaner Name": cleaner_name,
-        "Submitted At": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "Submitted At": datetime.now(_ET).strftime("%Y-%m-%d %H:%M"),
         "Fully Stocked": fully_stocked,
         "Photo Count": len([p for p in photos if p]),
     }
@@ -282,7 +285,7 @@ def _supplies_html(fully_stocked, supplies):
 
 def _build_email(cleaner_name, property_name, fully_stocked, supplies, damage_notes, photos, manager, recipient_email, recipient_name):
     smtp_user = os.getenv("SMTP_USER", "")
-    subject = f"Cleaning Report — {property_name} — {datetime.now().strftime('%b %d, %Y')}"
+    subject = f"Cleaning Report — {property_name} — {datetime.now(_ET).strftime('%b %d, %Y')}"
 
     mgr_line = ""
     if manager:
@@ -315,7 +318,7 @@ def _build_email(cleaner_name, property_name, fully_stocked, supplies, damage_no
       <div style='background:white;padding:24px;border:1px solid #E5E7EB;border-top:none;border-radius:0 0 12px 12px'>
         <p><strong>Property:</strong> {property_name}</p>
         <p><strong>Cleaner:</strong> {cleaner_name}</p>
-        <p><strong>Date:</strong> {datetime.now().strftime('%B %d, %Y at %I:%M %p')}</p>
+        <p><strong>Date:</strong> {datetime.now(_ET).strftime('%B %d, %Y at %I:%M %p')}</p>
         {mgr_line}
         <hr style='border:none;border-top:1px solid #E5E7EB;margin:20px 0'>
         <h3 style='color:#1B3A6B'>Inventory</h3>
@@ -380,7 +383,7 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
         "property_name": property_name,
         "damage_notes": damage_notes,
         "supplies_summary": supply_summary,
-        "submitted_at": datetime.now().isoformat(),
+        "submitted_at": datetime.now(_ET).isoformat(),
     }
     # Primary manager
     requests.post(GHL_WEBHOOK_URL, json={**base,
