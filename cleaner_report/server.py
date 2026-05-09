@@ -351,12 +351,9 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
         photo_lines = [f"Photo {i + 1}: {url}" for i, url in enumerate(photo_urls)]
         photo_links = "\n".join(photo_lines)
 
-    # Clean report body — only include sections that have content
+    # Clean report body — property/cleaner are in the greeting, start from date
     lines = [
-        f"Property: {property_name}",
-        f"Cleaner: {cleaner_name}",
         f"Date: {submitted_at}",
-        "",
         f"Inventory: {supply_summary}",
     ]
     if damage_notes:
