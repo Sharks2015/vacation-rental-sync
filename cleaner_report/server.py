@@ -1,7 +1,28 @@
 import os
+import re
 import threading
 from datetime import datetime
 from zoneinfo import ZoneInfo
+
+_EMOJI_RE = re.compile(
+    "[\U00010000-\U0010ffff"
+    "\U0001F600-\U0001F64F"
+    "\U0001F300-\U0001F5FF"
+    "\U0001F680-\U0001F6FF"
+    "\U0001F1E0-\U0001F1FF"
+    "☀-➿"
+    "️⃐-⃿]+",
+    flags=re.UNICODE,
+)
+
+def _strip(text):
+    if not text:
+        return text
+    text = _EMOJI_RE.sub("", text)
+    # Clean up old combined-format headers that came from the legacy app
+    text = re.sub(r"^\s*(DAMAGE|SMELL|BED SHEETS|TOWELS)\s*:?\s*", "", text, flags=re.IGNORECASE | re.MULTILINE)
+    text = re.sub(r"^[•·]\s*", "", text, flags=re.MULTILINE)
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
 
 import cloudinary
 import cloudinary.uploader
@@ -357,11 +378,11 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
         f"Inventory: {supply_summary}",
     ]
     if damage_notes:
-        lines += ["", f"Damage: {damage_notes}"]
+        lines += ["", f"Damage: {_strip(damage_notes)}"]
     if smell_notes:
-        lines += ["", f"Smell: {smell_notes}"]
+        lines += ["", f"Smell: {_strip(smell_notes)}"]
     if stain_notes:
-        lines += ["", f"Stains: {stain_notes}"]
+        lines += ["", f"Stains:\n{stain_notes}"]
     if photo_links:
         lines += ["", f"Photos: {photo_links}"]
 

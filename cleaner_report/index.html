@@ -1832,22 +1832,25 @@ function buildSmellSection() {
 
 function buildStainSection() {
   if (state.noStain) return '';
-  const parts = [];
-  const bedLines = [];
-  for (const [size, data] of Object.entries(state.bedSheets)) {
+  const result = [];
+  const sizeOrder = ['king', 'queen', 'full', 'twin'];
+  const sizeNames = { king: 'King', queen: 'Queen', full: 'Full', twin: 'Twin' };
+  const sheetLines = [];
+  sizeOrder.forEach(size => {
+    const data = state.bedSheets[size];
     const items = [];
-    if (data.fitted > 0)  items.push(`Fitted Sheet ×${data.fitted}`);
-    if (data.flat > 0)    items.push(`Flat Sheet ×${data.flat}`);
-    if (data.duvet > 0)   items.push(`Duvet Cover ×${data.duvet}`);
-    if (data.pillows > 0) items.push(`Pillowcases ×${data.pillows}`);
-    if (items.length) bedLines.push(`${size.charAt(0).toUpperCase()+size.slice(1)}: ${items.join(', ')}`);
-  }
-  if (bedLines.length) parts.push(`Bed Sheets — ${bedLines.join(' | ')}`);
+    if (data.fitted > 0)  items.push(`Fitted Sheet x${data.fitted}`);
+    if (data.flat > 0)    items.push(`Flat Sheet x${data.flat}`);
+    if (data.duvet > 0)   items.push(`Duvet Cover x${data.duvet}`);
+    if (data.pillows > 0) items.push(`Pillowcases x${data.pillows}`);
+    if (items.length) sheetLines.push(`${sizeNames[size]}: ${items.join(', ')}`);
+  });
+  if (sheetLines.length) result.push(`Stained Sheets: ${sheetLines.join(' | ')}`);
   const towelLines = Object.entries(state.towels)
     .filter(([, n]) => n > 0)
-    .map(([t, n]) => `${TOWEL_LABELS[t] || t}: ${n}`);
-  if (towelLines.length) parts.push(`Towels — ${towelLines.join(', ')}`);
-  return parts.join('\n');
+    .map(([t, n]) => `${TOWEL_LABELS[t] || t} x${n}`);
+  if (towelLines.length) result.push(`Stained Towels: ${towelLines.join(', ')}`);
+  return result.join('\n');
 }
 
 document.getElementById('btn-submit').addEventListener('click', async () => {
