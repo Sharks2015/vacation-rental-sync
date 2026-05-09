@@ -420,22 +420,27 @@ function clearFilters() {
 }
 
 function updateStats(reports) {
-  const today = new Date().toISOString().slice(0, 10);
+  // Get today's date in ET to match how submitted_at is stored
+  const todayET = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); // "YYYY-MM-DD"
   document.getElementById('stat-total').textContent = reports.length;
-  document.getElementById('stat-today').textContent = reports.filter(r => r.submitted_at && r.submitted_at.startsWith(today)).length;
+  document.getElementById('stat-today').textContent = reports.filter(r => r.submitted_at && r.submitted_at.startsWith(todayET)).length;
   document.getElementById('stat-supply').textContent = reports.filter(r => !r.fully_stocked && r.supplies_flagged).length;
   document.getElementById('stat-damage').textContent = reports.filter(r => r.damage_notes).length;
 }
 
 function fmtDate(str) {
+  // submitted_at is stored as "YYYY-MM-DD HH:MM" already in ET — parse directly
   if (!str) return '';
-  try {
-    return new Date(str.replace(' ', 'T')).toLocaleString('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric',
-      hour: 'numeric', minute: '2-digit', hour12: true,
-      timeZone: 'America/New_York'
-    });
-  } catch { return str; }
+  const [d, t] = str.split(' ');
+  if (!d) return str;
+  const [y, m, day] = d.split('-').map(Number);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let out = `${months[m-1]} ${day}, ${y}`;
+  if (t) {
+    const [h, min] = t.split(':').map(Number);
+    out += `, ${h % 12 || 12}:${String(min).padStart(2,'0')} ${h >= 12 ? 'PM' : 'AM'} ET`;
+  }
+  return out;
 }
 
 function renderReports(reports) {
@@ -455,7 +460,7 @@ function renderReports(reports) {
 
     let supplyHtml = '';
     if (r.fully_stocked) {
-      supplyHtml = '<span class="fully-stocked-tag">✅ Fully Stocked</span>';
+      supplyHtml = '<span class="fully-stocked-tag">Fully Stocked</span>';
     } else if (r.supplies_flagged) {
       const tags = r.supplies_flagged.split(', ').map(item => {
         const isOut = item.includes('Completely Out') || item.includes('🔴');
@@ -466,7 +471,7 @@ function renderReports(reports) {
 
     const dmgText = String(r.damage_notes || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>');
     const damageHtml = hasDamage
-      ? `<div class="damage-box"><strong>⚠️ Damages, Smells &amp; Stains</strong><div style="margin-top:4px">${dmgText}</div></div>`
+      ? `<div class="damage-box"><strong>Damage &amp; Odor Notes</strong><div style="margin-top:4px">${dmgText}</div></div>`
       : '';
 
     const photoHtml = (r.photo_urls && r.photo_urls.length)
@@ -482,7 +487,7 @@ function renderReports(reports) {
 
     const footerItems = [];
     if (r.photo_count > 0 && !photoHtml)
-      footerItems.push(`<span class="footer-pill blue">📷 ${r.photo_count} photo${r.photo_count !== 1 ? 's' : ''}</span>`);
+      footerItems.push(`<span class="footer-pill blue">${r.photo_count} photo${r.photo_count !== 1 ? 's' : ''}</span>`);
 
     const footer = footerItems.length
       ? `<div class="card-footer">${footerItems.join('')}</div>`
@@ -493,7 +498,7 @@ function renderReports(reports) {
         <div class="card-top">
           <div>
             <div class="property-name">${r.property || '—'}</div>
-            <div class="cleaner-line">👤 ${r.cleaner || '—'}</div>
+            <div class="cleaner-line">${r.cleaner || '—'}</div>
           </div>
           <div class="submitted-at">${fmtDate(r.submitted_at)}</div>
         </div>

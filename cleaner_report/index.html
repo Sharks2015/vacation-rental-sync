@@ -1063,6 +1063,20 @@ document.getElementById('btn-submit').addEventListener('click', async () => {
 });
 
 // ── History ──
+function fmtET(str) {
+  if (!str) return '';
+  const [d, t] = str.split(' ');
+  if (!d) return str;
+  const [y, m, day] = d.split('-').map(Number);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let out = `${months[m-1]} ${day}, ${y}`;
+  if (t) {
+    const [h, min] = t.split(':').map(Number);
+    out += ` at ${h % 12 || 12}:${String(min).padStart(2,'0')} ${h >= 12 ? 'PM' : 'AM'} ET`;
+  }
+  return out;
+}
+
 function switchTab(tab) {
   if (tab === 'history') { loadHistory(); showScreen('screen-history'); }
   else { showScreen('screen-properties'); }
@@ -1082,11 +1096,7 @@ async function loadHistory() {
     data.reports.forEach(r => {
       const card = document.createElement('div');
       card.className = 'history-card';
-      let dateStr = r.submitted_at || '';
-      try {
-        const d = new Date(r.submitted_at);
-        if (!isNaN(d)) dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' at ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-      } catch(e) {}
+      const dateStr = fmtET(r.submitted_at);
 
       let badges = '';
       if (r.fully_stocked) { badges += '<span class="hbadge hbadge-ok">Fully Stocked</span>'; }
