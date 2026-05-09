@@ -282,7 +282,7 @@ def _upload_photos(photos, property_name):
     return urls
 
 
-STATUS_LABELS = {"running_low": "⚠️ Running Low", "completely_out": "🔴 Completely Out"}
+STATUS_LABELS = {"running_low": "Running Low", "completely_out": "Completely Out"}
 
 
 def _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_notes, smell_notes, stain_notes, photo_urls):
@@ -346,7 +346,12 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
 
     submitted_at = datetime.now(_ET).strftime("%B %d, %Y at %I:%M %p ET")
 
-    # Plain-text report body for GHL email/SMS template
+    photo_links = ""
+    if photo_urls:
+        photo_lines = [f"Photo {i + 1}: {url}" for i, url in enumerate(photo_urls)]
+        photo_links = "\n".join(photo_lines)
+
+    # Clean report body — only include sections that have content
     lines = [
         f"Property: {property_name}",
         f"Cleaner: {cleaner_name}",
@@ -355,26 +360,22 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
         f"Inventory: {supply_summary}",
     ]
     if damage_notes:
-        lines += ["", "Damage:", damage_notes]
+        lines += ["", f"Damage: {damage_notes}"]
     if smell_notes:
-        lines += ["", "Smell:", smell_notes]
+        lines += ["", f"Smell: {smell_notes}"]
     if stain_notes:
-        lines += ["", "Stains:", stain_notes]
-
-    photo_links = ""
-    if photo_urls:
-        photo_lines = [f"Photo {i + 1}: {url}" for i, url in enumerate(photo_urls)]
-        photo_links = "\n".join(photo_lines)
-        lines += ["", "Photos:"] + photo_lines
+        lines += ["", f"Stains: {stain_notes}"]
+    if photo_links:
+        lines += ["", f"Photos: {photo_links}"]
 
     report_body = "\n".join(lines)
 
     base = {
         "cleaner_name": cleaner_name,
         "property_name": property_name,
-        "damage_notes": damage_notes or "None",
-        "smell_notes": smell_notes or "None",
-        "stain_notes": stain_notes or "None",
+        "damage_notes": damage_notes,
+        "smell_notes": smell_notes,
+        "stain_notes": stain_notes,
         "supplies_summary": supply_summary,
         "report_body": report_body,
         "photo_links": photo_links or "No photos",
