@@ -703,6 +703,28 @@
     .towel-row.has-stain { background: #FEFCE8; }
     .towel-label { font-size: 15px; color: var(--text); font-weight: 500; }
 
+    /* Stain item rows */
+    .stain-size-header {
+      padding: 8px 20px 6px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #6B7280;
+      background: #F9FAFB;
+      border-bottom: 1px solid #F3F4F6;
+    }
+    .stain-item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      border-bottom: 1px solid #F3F4F6;
+      transition: background 0.15s;
+    }
+    .stain-item-row.has-stain { background: #FEFCE8; }
+    .stain-item-label { font-size: 15px; color: var(--text); font-weight: 500; }
+
     /* History */
     .history-btn {
       margin: 0 16px 4px;
@@ -986,91 +1008,238 @@
       <!-- Damage Report -->
       <div class="card">
         <div class="card-title">🚨 Damage Report</div>
-        <div class="severity-row">
-          <button class="severity-btn" data-sev="minor">🟢 Minor</button>
-          <button class="severity-btn" data-sev="medium">🟡 Medium</button>
-          <button class="severity-btn" data-sev="urgent">🔴 Urgent</button>
-        </div>
-        <textarea class="damage-textarea" id="damage-text"
-          placeholder="Describe damage (broken items, missing items, guest-caused damage)…"></textarea>
-        <input type="file" id="photo-input" accept="image/*" multiple style="display:none">
-        <button class="photo-add-btn" id="photo-add-btn" style="margin:0 16px 12px;width:calc(100% - 32px)">
-          📷 Add Damage Photos
+        <button class="fully-stocked-btn" id="no-damage-btn">
+          <span class="fs-check" id="no-damage-check"></span>
+          No Damages — Skip This Section
         </button>
-        <div class="photo-grid" id="photo-grid" style="padding:0 16px 12px"></div>
+        <div id="damage-inputs">
+          <div class="severity-row">
+            <button class="severity-btn" data-sev="minor">🟢 Minor</button>
+            <button class="severity-btn" data-sev="medium">🟡 Medium</button>
+            <button class="severity-btn" data-sev="urgent">🔴 Urgent</button>
+          </div>
+          <textarea class="damage-textarea" id="damage-text"
+            placeholder="Describe damage (broken items, missing items, guest-caused damage)…"></textarea>
+          <input type="file" id="photo-input" accept="image/*" multiple style="display:none">
+          <button class="photo-add-btn" id="photo-add-btn" style="margin:0 16px 12px;width:calc(100% - 32px)">
+            📷 Add Damage Photos
+          </button>
+          <div class="photo-grid" id="photo-grid" style="padding:0 16px 12px"></div>
+        </div>
       </div>
 
       <!-- Smell Report -->
       <div class="card">
         <div class="card-title">👃 Smell Report</div>
-        <div class="smell-grid">
-          <button class="smell-btn" data-smell="smoke"><span class="smell-emoji">🚬</span>Smoke</button>
-          <button class="smell-btn" data-smell="weed"><span class="smell-emoji">🌿</span>Weed</button>
-          <button class="smell-btn" data-smell="trash"><span class="smell-emoji">🗑️</span>Trash</button>
-          <button class="smell-btn" data-smell="pet"><span class="smell-emoji">🐾</span>Pet</button>
-          <button class="smell-btn" data-smell="sewage"><span class="smell-emoji">💧</span>Sewage</button>
-          <button class="smell-btn" data-smell="other"><span class="smell-emoji">❓</span>Other</button>
+        <button class="fully-stocked-btn" id="no-smell-btn">
+          <span class="fs-check" id="no-smell-check"></span>
+          No Smells — Skip This Section
+        </button>
+        <div id="smell-inputs">
+          <div class="smell-grid">
+            <button class="smell-btn" data-smell="smoke"><span class="smell-emoji">🚬</span>Smoke</button>
+            <button class="smell-btn" data-smell="weed"><span class="smell-emoji">🌿</span>Weed</button>
+            <button class="smell-btn" data-smell="trash"><span class="smell-emoji">🗑️</span>Trash</button>
+            <button class="smell-btn" data-smell="pet"><span class="smell-emoji">🐾</span>Pet</button>
+            <button class="smell-btn" data-smell="sewage"><span class="smell-emoji">💧</span>Sewage</button>
+            <button class="smell-btn" data-smell="other"><span class="smell-emoji">❓</span>Other</button>
+          </div>
+          <textarea class="damage-textarea" id="smell-notes"
+            placeholder="Optional: additional smell details…" style="min-height:70px;padding-top:0"></textarea>
         </div>
-        <textarea class="damage-textarea" id="smell-notes"
-          placeholder="Optional: additional smell details…" style="min-height:70px;padding-top:0"></textarea>
       </div>
 
       <!-- Stain Report -->
       <div class="card">
         <div class="card-title">🧺 Stain Report</div>
-        <p style="padding:4px 20px 8px;font-size:13px;color:#6B7280;line-height:1.5">
-          Only report items where stains did <strong>not</strong> come out after laundry.<br>
-          <span style="color:#9CA3AF;font-size:12px">Solo reporte manchas que no salieron después del lavado.</span>
-        </p>
+        <button class="fully-stocked-btn" id="no-stains-btn">
+          <span class="fs-check" id="no-stains-check"></span>
+          No Stains — Skip This Section
+        </button>
+        <div id="stain-content">
+          <p style="padding:4px 20px 8px;font-size:13px;color:#6B7280;line-height:1.5">
+            Only report items where stains did <strong>not</strong> come out after laundry.<br>
+            <span style="color:#9CA3AF;font-size:12px">Solo reporte manchas que no salieron después del lavado.</span>
+          </p>
 
-        <div class="stain-subsection-header">🛏️ Bed Sheets</div>
-        <div class="bed-size-grid">
-          <button class="bed-size-btn" data-size="king">King</button>
-          <button class="bed-size-btn" data-size="queen">Queen</button>
-          <button class="bed-size-btn" data-size="full">Full</button>
-          <button class="bed-size-btn" data-size="twin">Twin</button>
-        </div>
-        <div id="bed-details"></div>
+          <div class="stain-subsection-header">🛏️ Bed Sheets</div>
 
-        <div class="stain-subsection-header">🪣 Towels</div>
-        <div class="towel-row" data-towel="bath">
-          <span class="towel-label">Bath Towel</span>
-          <div class="counter">
-            <button class="counter-btn" data-action="dec" data-towel="bath">−</button>
-            <span class="counter-val" id="towel-bath">0</span>
-            <button class="counter-btn" data-action="inc" data-towel="bath">+</button>
+          <div class="stain-size-header">King</div>
+          <div class="stain-item-row" id="row-king-fitted">
+            <span class="stain-item-label">Fitted Sheet</span>
+            <div class="counter">
+              <button class="counter-btn" data-action="dec" data-size="king" data-item="fitted">−</button>
+              <span class="counter-val" id="sheet-king-fitted">0</span>
+              <button class="counter-btn" data-action="inc" data-size="king" data-item="fitted">+</button>
+            </div>
           </div>
-        </div>
-        <div class="towel-row" data-towel="hand">
-          <span class="towel-label">Hand Towel</span>
-          <div class="counter">
-            <button class="counter-btn" data-action="dec" data-towel="hand">−</button>
-            <span class="counter-val" id="towel-hand">0</span>
-            <button class="counter-btn" data-action="inc" data-towel="hand">+</button>
+          <div class="stain-item-row" id="row-king-flat">
+            <span class="stain-item-label">Flat Sheet</span>
+            <div class="counter">
+              <button class="counter-btn" data-action="dec" data-size="king" data-item="flat">−</button>
+              <span class="counter-val" id="sheet-king-flat">0</span>
+              <button class="counter-btn" data-action="inc" data-size="king" data-item="flat">+</button>
+            </div>
           </div>
-        </div>
-        <div class="towel-row" data-towel="face">
-          <span class="towel-label">Face Towel</span>
-          <div class="counter">
-            <button class="counter-btn" data-action="dec" data-towel="face">−</button>
-            <span class="counter-val" id="towel-face">0</span>
-            <button class="counter-btn" data-action="inc" data-towel="face">+</button>
+          <div class="stain-item-row" id="row-king-duvet">
+            <span class="stain-item-label">Duvet Cover</span>
+            <div class="counter">
+              <button class="counter-btn" data-action="dec" data-size="king" data-item="duvet">−</button>
+              <span class="counter-val" id="sheet-king-duvet">0</span>
+              <button class="counter-btn" data-action="inc" data-size="king" data-item="duvet">+</button>
+            </div>
           </div>
-        </div>
-        <div class="towel-row" data-towel="kitchen">
-          <span class="towel-label">Kitchen Towel</span>
-          <div class="counter">
-            <button class="counter-btn" data-action="dec" data-towel="kitchen">−</button>
-            <span class="counter-val" id="towel-kitchen">0</span>
-            <button class="counter-btn" data-action="inc" data-towel="kitchen">+</button>
+          <div class="stain-item-row" id="row-king-pillows">
+            <span class="stain-item-label">Pillowcases</span>
+            <div class="counter">
+              <button class="counter-btn" data-action="dec" data-size="king" data-item="pillows">−</button>
+              <span class="counter-val" id="sheet-king-pillows">0</span>
+              <button class="counter-btn" data-action="inc" data-size="king" data-item="pillows">+</button>
+            </div>
           </div>
-        </div>
-        <div class="towel-row" data-towel="beach">
-          <span class="towel-label">Beach Towel</span>
-          <div class="counter">
-            <button class="counter-btn" data-action="dec" data-towel="beach">−</button>
-            <span class="counter-val" id="towel-beach">0</span>
-            <button class="counter-btn" data-action="inc" data-towel="beach">+</button>
+
+          <div class="stain-size-header">Queen</div>
+          <div class="stain-item-row" id="row-queen-fitted">
+            <span class="stain-item-label">Fitted Sheet</span>
+            <div class="counter">
+              <button class="counter-btn" data-action="dec" data-size="queen" data-item="fitted">−</button>
+              <span class="counter-val" id="sheet-queen-fitted">0</span>
+              <button class="counter-btn" data-action="inc" data-size="queen" data-item="fitted">+</button>
+            </div>
+          </div>
+          <div class="stain-item-row" id="row-queen-flat">
+            <span class="stain-item-label">Flat Sheet</span>
+            <div class="counter">
+              <button class="counter-btn" data-action="dec" data-size="queen" data-item="flat">−</button>
+              <span class="counter-val" id="sheet-queen-flat">0</span>
+              <button class="counter-btn" data-action="inc" data-size="queen" data-item="flat">+</button>
+            </div>
+          </div>
+          <div class="stain-item-row" id="row-queen-duvet">
+            <span class="stain-item-label">Duvet Cover</span>
+            <div class="counter">
+              <button class="counter-btn" data-action="dec" data-size="queen" data-item="duvet">−</button>
+              <span class="counter-val" id="sheet-queen-duvet">0</span>
+              <button class="counter-btn" data-action="inc" data-size="queen" data-item="duvet">+</button>
+            </div>
+          </div>
+          <div class="stain-item-row" id="row-queen-pillows">
+            <span class="stain-item-label">Pillowcases</span>
+            <div class="counter">
+              <button class="counter-btn" data-action="dec" data-size="queen" data-item="pillows">−</button>
+              <span class="counter-val" id="sheet-queen-pillows">0</span>
+              <button class="counter-btn" data-action="inc" data-size="queen" data-item="pillows">+</button>
+            </div>
+          </div>
+
+          <div class="stain-size-header">Full</div>
+          <div class="stain-item-row" id="row-full-fitted">
+            <span class="stain-item-label">Fitted Sheet</span>
+            <div class="counter">
+              <button class="counter-btn" data-action="dec" data-size="full" data-item="fitted">−</button>
+              <span class="counter-val" id="sheet-full-fitted">0</span>
+              <button class="counter-btn" data-action="inc" data-size="full" data-item="fitted">+</button>
+            </div>
+          </div>
+          <div class="stain-item-row" id="row-full-flat">
+            <span class="stain-item-label">Flat Sheet</span>
+            <div class="counter">
+              <button class="counter-btn" data-action="dec" data-size="full" data-item="flat">−</button>
+              <span class="counter-val" id="sheet-full-flat">0</span>
+              <button class="counter-btn" data-action="inc" data-size="full" data-item="flat">+</button>
+            </div>
+          </div>
+          <div class="stain-item-row" id="row-full-duvet">
+            <span class="stain-item-label">Duvet Cover</span>
+            <div class="counter">
+              <button class="counter-btn" data-action="dec" data-size="full" data-item="duvet">−</button>
+              <span class="counter-val" id="sheet-full-duvet">0</span>
+              <button class="counter-btn" data-action="inc" data-size="full" data-item="duvet">+</button>
+            </div>
+          </div>
+          <div class="stain-item-row" id="row-full-pillows">
+            <span class="stain-item-label">Pillowcases</span>
+            <div class="counter">
+              <button class="counter-btn" data-action="dec" data-size="full" data-item="pillows">−</button>
+              <span class="counter-val" id="sheet-full-pillows">0</span>
+              <button class="counter-btn" data-action="inc" data-size="full" data-item="pillows">+</button>
+            </div>
+          </div>
+
+          <div class="stain-size-header">Twin</div>
+          <div class="stain-item-row" id="row-twin-fitted">
+            <span class="stain-item-label">Fitted Sheet</span>
+            <div class="counter">
+              <button class="counter-btn" data-action="dec" data-size="twin" data-item="fitted">−</button>
+              <span class="counter-val" id="sheet-twin-fitted">0</span>
+              <button class="counter-btn" data-action="inc" data-size="twin" data-item="fitted">+</button>
+            </div>
+          </div>
+          <div class="stain-item-row" id="row-twin-flat">
+            <span class="stain-item-label">Flat Sheet</span>
+            <div class="counter">
+              <button class="counter-btn" data-action="dec" data-size="twin" data-item="flat">−</button>
+              <span class="counter-val" id="sheet-twin-flat">0</span>
+              <button class="counter-btn" data-action="inc" data-size="twin" data-item="flat">+</button>
+            </div>
+          </div>
+          <div class="stain-item-row" id="row-twin-duvet">
+            <span class="stain-item-label">Duvet Cover</span>
+            <div class="counter">
+              <button class="counter-btn" data-action="dec" data-size="twin" data-item="duvet">−</button>
+              <span class="counter-val" id="sheet-twin-duvet">0</span>
+              <button class="counter-btn" data-action="inc" data-size="twin" data-item="duvet">+</button>
+            </div>
+          </div>
+          <div class="stain-item-row" id="row-twin-pillows">
+            <span class="stain-item-label">Pillowcases</span>
+            <div class="counter">
+              <button class="counter-btn" data-action="dec" data-size="twin" data-item="pillows">−</button>
+              <span class="counter-val" id="sheet-twin-pillows">0</span>
+              <button class="counter-btn" data-action="inc" data-size="twin" data-item="pillows">+</button>
+            </div>
+          </div>
+
+          <div class="stain-subsection-header">🪣 Towels</div>
+          <div class="towel-row" data-towel="bath">
+            <span class="towel-label">Bath Towel</span>
+            <div class="counter">
+              <button class="counter-btn" data-action="dec" data-towel="bath">−</button>
+              <span class="counter-val" id="towel-bath">0</span>
+              <button class="counter-btn" data-action="inc" data-towel="bath">+</button>
+            </div>
+          </div>
+          <div class="towel-row" data-towel="hand">
+            <span class="towel-label">Hand Towel</span>
+            <div class="counter">
+              <button class="counter-btn" data-action="dec" data-towel="hand">−</button>
+              <span class="counter-val" id="towel-hand">0</span>
+              <button class="counter-btn" data-action="inc" data-towel="hand">+</button>
+            </div>
+          </div>
+          <div class="towel-row" data-towel="face">
+            <span class="towel-label">Face Towel</span>
+            <div class="counter">
+              <button class="counter-btn" data-action="dec" data-towel="face">−</button>
+              <span class="counter-val" id="towel-face">0</span>
+              <button class="counter-btn" data-action="inc" data-towel="face">+</button>
+            </div>
+          </div>
+          <div class="towel-row" data-towel="kitchen">
+            <span class="towel-label">Kitchen Towel</span>
+            <div class="counter">
+              <button class="counter-btn" data-action="dec" data-towel="kitchen">−</button>
+              <span class="counter-val" id="towel-kitchen">0</span>
+              <button class="counter-btn" data-action="inc" data-towel="kitchen">+</button>
+            </div>
+          </div>
+          <div class="towel-row" data-towel="beach">
+            <span class="towel-label">Beach Towel</span>
+            <div class="counter">
+              <button class="counter-btn" data-action="dec" data-towel="beach">−</button>
+              <span class="counter-val" id="towel-beach">0</span>
+              <button class="counter-btn" data-action="inc" data-towel="beach">+</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1190,7 +1359,7 @@ const SMELL_LABELS = {
 };
 const TOWEL_LABELS = {
   bath: 'Bath Towel', hand: 'Hand Towel', face: 'Face Towel',
-  pool: 'Pool Towel', kitchen: 'Kitchen Towel',
+  kitchen: 'Kitchen Towel', beach: 'Beach Towel',
 };
 const STAIN_LABELS = {
   makeup: 'Makeup', blood: 'Blood', bleach: 'Bleach', unknown: 'Unknown', other: 'Other',
@@ -1199,10 +1368,10 @@ const STAIN_LABELS = {
 // ── State ─────────────────────────────────────────────────────────────────────
 
 const FRESH_BED_SHEETS = () => ({
-  king:  { active: false, fitted: false, flat: false, duvet: false, pillows: 0 },
-  queen: { active: false, fitted: false, flat: false, duvet: false, pillows: 0 },
-  full:  { active: false, fitted: false, flat: false, duvet: false, pillows: 0 },
-  twin:  { active: false, fitted: false, flat: false, duvet: false, pillows: 0 },
+  king:  { fitted: 0, flat: 0, duvet: 0, pillows: 0 },
+  queen: { fitted: 0, flat: 0, duvet: 0, pillows: 0 },
+  full:  { fitted: 0, flat: 0, duvet: 0, pillows: 0 },
+  twin:  { fitted: 0, flat: 0, duvet: 0, pillows: 0 },
 });
 
 const state = {
@@ -1214,9 +1383,12 @@ const state = {
   fullyStocked: false,
   photos: [],
   damageSeverity: null,
+  noDamage: false,
   smells: [],
+  noSmell: false,
   bedSheets: FRESH_BED_SHEETS(),
   towels: { bath: 0, hand: 0, face: 0, kitchen: 0, beach: 0 },
+  noStain: false,
 };
 
 // ── Screen management ─────────────────────────────────────────────────────────
@@ -1336,23 +1508,47 @@ function openReport(propName) {
   state.fullyStocked = false;
   state.photos = [];
   state.damageSeverity = null;
+  state.noDamage = false;
   state.smells = [];
+  state.noSmell = false;
   state.bedSheets = FRESH_BED_SHEETS();
   state.towels = { bath: 0, hand: 0, face: 0, kitchen: 0, beach: 0 };
+  state.noStain = false;
+
   document.getElementById('damage-text').value = '';
   document.getElementById('smell-notes').value = '';
-  document.getElementById('bed-details').innerHTML = '';
   document.getElementById('photo-grid').innerHTML = '';
   document.getElementById('photo-input').value = '';
   document.getElementById('report-prop-name').textContent = propName;
+
+  // Reset section toggle buttons
+  ['no-damage','no-smell','no-stains'].forEach(id => {
+    document.getElementById(`${id}-btn`).classList.remove('selected');
+    document.getElementById(`${id}-check`).textContent = '';
+  });
+  document.getElementById('damage-inputs').style.display = '';
+  document.getElementById('smell-inputs').style.display = '';
+  document.getElementById('stain-content').style.display = '';
+
   document.querySelectorAll('.severity-btn').forEach(b => b.className = 'severity-btn');
   document.querySelectorAll('.smell-btn').forEach(b => b.classList.remove('selected'));
-  document.querySelectorAll('.bed-size-btn').forEach(b => b.classList.remove('active'));
+
+  // Reset bed sheet counters
+  ['king','queen','full','twin'].forEach(size => {
+    ['fitted','flat','duvet','pillows'].forEach(item => {
+      const el = document.getElementById(`sheet-${size}-${item}`);
+      if (el) { el.textContent = '0'; el.classList.remove('nonzero'); }
+      document.getElementById(`row-${size}-${item}`)?.classList.remove('has-stain');
+    });
+  });
+
+  // Reset towel counters
   ['bath','hand','face','kitchen','beach'].forEach(t => {
     const el = document.getElementById(`towel-${t}`);
     if (el) { el.textContent = '0'; el.classList.remove('nonzero'); }
     document.querySelector(`.towel-row[data-towel="${t}"]`)?.classList.remove('has-stain');
   });
+
   const fsBtn = document.getElementById('fully-stocked-btn');
   fsBtn.classList.remove('selected');
   document.getElementById('fs-check').textContent = '';
@@ -1523,69 +1719,71 @@ document.querySelector('.smell-grid').addEventListener('click', e => {
   }
 });
 
-// ── Bed Sheets ────────────────────────────────────────────────────────────────
+// ── No-Issues toggles ─────────────────────────────────────────────────────────
 
-document.querySelector('.bed-size-grid').addEventListener('click', e => {
-  const btn = e.target.closest('.bed-size-btn');
-  if (!btn) return;
-  const size = btn.dataset.size;
-  state.bedSheets[size].active = !state.bedSheets[size].active;
-  btn.classList.toggle('active', state.bedSheets[size].active);
-  renderBedDetail(size);
+document.getElementById('no-damage-btn').addEventListener('click', () => {
+  state.noDamage = !state.noDamage;
+  document.getElementById('no-damage-btn').classList.toggle('selected', state.noDamage);
+  document.getElementById('no-damage-check').textContent = state.noDamage ? '✓' : '';
+  document.getElementById('damage-inputs').style.display = state.noDamage ? 'none' : '';
+  if (state.noDamage) {
+    state.damageSeverity = null;
+    state.photos = [];
+    document.getElementById('damage-text').value = '';
+    document.getElementById('photo-grid').innerHTML = '';
+    document.getElementById('photo-input').value = '';
+    document.querySelectorAll('.severity-btn').forEach(b => b.className = 'severity-btn');
+  }
 });
 
-function renderBedDetail(size) {
-  const container = document.getElementById('bed-details');
-  const existing = document.getElementById(`bed-detail-${size}`);
-  if (!state.bedSheets[size].active) { existing?.remove(); return; }
-  if (existing) return;
-  const label = { king: 'King', queen: 'Queen', full: 'Full', twin: 'Twin' }[size];
-  const el = document.createElement('div');
-  el.className = 'bed-detail';
-  el.id = `bed-detail-${size}`;
-  el.innerHTML = `
-    <div class="bed-detail-header">🛏️ ${label} — Select stained items</div>
-    <label class="bed-check-row">
-      <input type="checkbox" id="${size}-fitted" onchange="setBedItem('${size}','fitted',this.checked)">
-      <span class="bed-check-label">Fitted Sheet</span>
-    </label>
-    <label class="bed-check-row">
-      <input type="checkbox" id="${size}-flat" onchange="setBedItem('${size}','flat',this.checked)">
-      <span class="bed-check-label">Flat Sheet</span>
-    </label>
-    <label class="bed-check-row">
-      <input type="checkbox" id="${size}-duvet" onchange="setBedItem('${size}','duvet',this.checked)">
-      <span class="bed-check-label">Duvet Cover</span>
-    </label>
-    <div class="pillow-counter-row">
-      <span class="pillow-label">Pillowcase</span>
-      <div class="counter">
-        <button class="counter-btn" onclick="setPillows('${size}',-1)">−</button>
-        <span class="counter-val" id="${size}-pillows">0</span>
-        <button class="counter-btn" onclick="setPillows('${size}',1)">+</button>
-      </div>
-    </div>
-  `;
-  const order = ['king','queen','full','twin'];
-  const myIdx = order.indexOf(size);
-  const children = Array.from(container.children);
-  let inserted = false;
-  for (const child of children) {
-    if (order.indexOf(child.id.replace('bed-detail-','')) > myIdx) {
-      container.insertBefore(el, child); inserted = true; break;
-    }
+document.getElementById('no-smell-btn').addEventListener('click', () => {
+  state.noSmell = !state.noSmell;
+  document.getElementById('no-smell-btn').classList.toggle('selected', state.noSmell);
+  document.getElementById('no-smell-check').textContent = state.noSmell ? '✓' : '';
+  document.getElementById('smell-inputs').style.display = state.noSmell ? 'none' : '';
+  if (state.noSmell) {
+    state.smells = [];
+    document.getElementById('smell-notes').value = '';
+    document.querySelectorAll('.smell-btn').forEach(b => b.classList.remove('selected'));
   }
-  if (!inserted) container.appendChild(el);
-}
+});
 
-function setBedItem(size, item, checked) { state.bedSheets[size][item] = checked; }
+document.getElementById('no-stains-btn').addEventListener('click', () => {
+  state.noStain = !state.noStain;
+  document.getElementById('no-stains-btn').classList.toggle('selected', state.noStain);
+  document.getElementById('no-stains-check').textContent = state.noStain ? '✓' : '';
+  document.getElementById('stain-content').style.display = state.noStain ? 'none' : '';
+  if (state.noStain) {
+    state.bedSheets = FRESH_BED_SHEETS();
+    state.towels = { bath: 0, hand: 0, face: 0, kitchen: 0, beach: 0 };
+    ['king','queen','full','twin'].forEach(size => {
+      ['fitted','flat','duvet','pillows'].forEach(item => {
+        const el = document.getElementById(`sheet-${size}-${item}`);
+        if (el) { el.textContent = '0'; el.classList.remove('nonzero'); }
+        document.getElementById(`row-${size}-${item}`)?.classList.remove('has-stain');
+      });
+    });
+    ['bath','hand','face','kitchen','beach'].forEach(t => {
+      const el = document.getElementById(`towel-${t}`);
+      if (el) { el.textContent = '0'; el.classList.remove('nonzero'); }
+      document.querySelector(`.towel-row[data-towel="${t}"]`)?.classList.remove('has-stain');
+    });
+  }
+});
 
-function setPillows(size, delta) {
-  const sheet = state.bedSheets[size];
-  sheet.pillows = Math.max(0, Math.min(10, sheet.pillows + delta));
-  const el = document.getElementById(`${size}-pillows`);
-  if (el) { el.textContent = sheet.pillows; el.classList.toggle('nonzero', sheet.pillows > 0); }
-}
+// ── Bed Sheet counters ────────────────────────────────────────────────────────
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.counter-btn[data-size][data-item]');
+  if (!btn) return;
+  const size = btn.dataset.size;
+  const item = btn.dataset.item;
+  const delta = btn.dataset.action === 'inc' ? 1 : -1;
+  state.bedSheets[size][item] = Math.max(0, Math.min(20, (state.bedSheets[size][item] || 0) + delta));
+  const val = document.getElementById(`sheet-${size}-${item}`);
+  if (val) { val.textContent = state.bedSheets[size][item]; val.classList.toggle('nonzero', state.bedSheets[size][item] > 0); }
+  document.getElementById(`row-${size}-${item}`)?.classList.toggle('has-stain', state.bedSheets[size][item] > 0);
+});
 
 // ── Towel counters ────────────────────────────────────────────────────────────
 
@@ -1615,32 +1813,42 @@ function showToast(msg) {
 
 function buildDamageNotes() {
   const parts = [];
-  const damageText = document.getElementById('damage-text').value.trim();
-  if (state.damageSeverity || damageText) {
-    const sev = state.damageSeverity ? `[${state.damageSeverity.toUpperCase()}] ` : '';
-    parts.push(`🚨 DAMAGE ${sev}${damageText}`);
+
+  if (!state.noDamage) {
+    const damageText = document.getElementById('damage-text').value.trim();
+    if (state.damageSeverity || damageText) {
+      const sev = state.damageSeverity ? `[${state.damageSeverity.toUpperCase()}] ` : '';
+      parts.push(`🚨 DAMAGE ${sev}${damageText}`);
+    }
   }
-  const smellNotes = document.getElementById('smell-notes').value.trim();
-  if (state.smells.length > 0 || smellNotes) {
-    let part = `👃 SMELL: ${state.smells.map(s => SMELL_LABELS[s]).join(', ') || 'Other'}`;
-    if (smellNotes) part += ` — ${smellNotes}`;
-    parts.push(part);
+
+  if (!state.noSmell) {
+    const smellNotes = document.getElementById('smell-notes').value.trim();
+    if (state.smells.length > 0 || smellNotes) {
+      let part = `👃 SMELL: ${state.smells.map(s => SMELL_LABELS[s]).join(', ') || 'Other'}`;
+      if (smellNotes) part += ` — ${smellNotes}`;
+      parts.push(part);
+    }
   }
-  const bedLines = [];
-  for (const [size, data] of Object.entries(state.bedSheets)) {
-    if (!data.active) continue;
-    const items = [];
-    if (data.fitted) items.push('Fitted Sheet');
-    if (data.flat) items.push('Flat Sheet');
-    if (data.duvet) items.push('Duvet Cover');
-    if (data.pillows > 0) items.push(`Pillowcase ×${data.pillows}`);
-    if (items.length) bedLines.push(`• ${size.charAt(0).toUpperCase()+size.slice(1)}: ${items.join(', ')}`);
+
+  if (!state.noStain) {
+    const bedLines = [];
+    for (const [size, data] of Object.entries(state.bedSheets)) {
+      const items = [];
+      if (data.fitted > 0)  items.push(`Fitted Sheet ×${data.fitted}`);
+      if (data.flat > 0)    items.push(`Flat Sheet ×${data.flat}`);
+      if (data.duvet > 0)   items.push(`Duvet Cover ×${data.duvet}`);
+      if (data.pillows > 0) items.push(`Pillowcases ×${data.pillows}`);
+      if (items.length) bedLines.push(`• ${size.charAt(0).toUpperCase()+size.slice(1)}: ${items.join(', ')}`);
+    }
+    if (bedLines.length) parts.push(`🛏️ BED SHEETS:\n${bedLines.join('\n')}`);
+
+    const towelLines = Object.entries(state.towels)
+      .filter(([, n]) => n > 0)
+      .map(([t, n]) => `• ${TOWEL_LABELS[t] || t}: ${n}`);
+    if (towelLines.length) parts.push(`🪣 TOWELS:\n${towelLines.join('\n')}`);
   }
-  if (bedLines.length) parts.push(`🛏️ BED SHEETS:\n${bedLines.join('\n')}`);
-  const towelLines = Object.entries(state.towels)
-    .filter(([,n]) => n > 0)
-    .map(([t,n]) => `• ${TOWEL_LABELS[t]}: ${n}`);
-  if (towelLines.length) parts.push(`🪣 TOWELS:\n${towelLines.join('\n')}`);
+
   return parts.join('\n\n');
 }
 
