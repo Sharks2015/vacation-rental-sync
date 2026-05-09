@@ -1,6 +1,7 @@
 import os
 import base64
 import smtplib
+import threading
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
@@ -116,24 +117,23 @@ def submit_report():
     damage_notes = data.get("damage_notes", "")
     photos = data.get("photos", [])
 
-    manager = _get_property_manager(property_name)
-
-    try:
-        _send_email(cleaner_name, property_name, fully_stocked, supplies, damage_notes, photos, manager)
-    except Exception as e:
-        print(f"Email error: {e}")
-
-    if GHL_WEBHOOK_URL:
+    def _process():
+        manager = _get_property_manager(property_name)
         try:
-            _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage_notes, manager)
+            _send_email(cleaner_name, property_name, fully_stocked, supplies, damage_notes, photos, manager)
         except Exception as e:
-            print(f"GHL webhook error: {e}")
+            print(f"Email error: {e}")
+        if GHL_WEBHOOK_URL:
+            try:
+                _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage_notes, manager)
+            except Exception as e:
+                print(f"GHL webhook error: {e}")
+        try:
+            _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_notes, photos)
+        except Exception as e:
+            print(f"Save report error: {e}")
 
-    try:
-        _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_notes, photos)
-    except Exception as e:
-        print(f"Save report error: {e}")
-
+    threading.Thread(target=_process, daemon=True).start()
     return jsonify({"success": True})
 
 
@@ -355,7 +355,7 @@ def _send_email(cleaner_name, property_name, fully_stocked, supplies, damage_not
     if manager_email and manager_email != NOTIFY_EMAIL:
         recipients.append(manager_email)
 
-    with smtplib.SMTP(smtp_host, smtp_port) as s:
+    with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as s:
         s.starttls()
         s.login(smtp_user, smtp_pass)
         for recipient in recipients:
