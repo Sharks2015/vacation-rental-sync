@@ -1559,6 +1559,16 @@ function buildSmellSection() {
 
 
 document.getElementById('btn-submit').addEventListener('click', async () => {
+  // Must either mark Fully Stocked or flag at least one supply item
+  if (!state.fullyStocked) {
+    const anyFlagged = Object.values(state.supplies).some(v => v);
+    if (!anyFlagged) {
+      showToast('Please mark Fully Stocked or flag at least one item.');
+      document.getElementById('supplies-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+  }
+
   // If a severity is selected, both description and photo are required
   if (!state.noDamage && state.damageSeverity) {
     const damageText = document.getElementById('damage-text').value.trim();
