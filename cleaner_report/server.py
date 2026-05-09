@@ -122,10 +122,6 @@ def submit_report():
 
     def _process():
         manager = _get_property_manager(property_name)
-        try:
-            _send_email(cleaner_name, property_name, fully_stocked, supplies, damage_notes, photos, manager)
-        except Exception as e:
-            print(f"Email error: {e}")
         if GHL_WEBHOOK_URL:
             try:
                 _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage_notes, manager)
@@ -378,20 +374,40 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
         f"{SUPPLY_LABELS.get(k, k)}: {STATUS_LABELS.get(v, v)}"
         for k, v in supplies.items() if v
     ) or "No issues"
+
+    submitted_at = datetime.now(_ET).strftime("%B %d, %Y at %I:%M %p ET")
+
+    # Plain-text report body for GHL email template
+    lines = [
+        f"Property: {property_name}",
+        f"Cleaner: {cleaner_name}",
+        f"Date: {submitted_at}",
+        "",
+        f"Inventory: {supply_summary}",
+    ]
+    if damage_notes:
+        lines += ["", "Damages / Smells / Stains:", damage_notes]
+    report_body = "\n".join(lines)
+
     base = {
         "cleaner_name": cleaner_name,
         "property_name": property_name,
-        "damage_notes": damage_notes,
+        "damage_notes": damage_notes or "None",
         "supplies_summary": supply_summary,
-        "submitted_at": datetime.now(_ET).isoformat(),
+        "report_body": report_body,
+        "submitted_at": submitted_at,
+        "notify_email": NOTIFY_EMAIL,
     }
-    # Primary manager
+
+    # Primary manager — GHL creates/updates contact, sends SMS + email
     requests.post(GHL_WEBHOOK_URL, json={**base,
         "manager_name": manager.get("name", ""),
         "manager_email": manager.get("email", ""),
         "manager_phone": manager.get("phone", ""),
     }, timeout=10)
-    # CC recipient (e.g. Jeanine) — send a second webhook so GHL creates their contact and texts them
+    print(f"[GHL] Webhook sent — manager: {manager.get('name','')} <{manager.get('email','')}>")
+
+    # CC phone (e.g. Jeanine) — second webhook so GHL texts them too
     cc_phone = manager.get("cc_phone", "")
     if cc_phone:
         requests.post(GHL_WEBHOOK_URL, json={**base,
