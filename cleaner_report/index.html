@@ -1559,11 +1559,16 @@ function buildSmellSection() {
 
 
 document.getElementById('btn-submit').addEventListener('click', async () => {
-  // Require photos if damage is reported
-  if (!state.noDamage) {
+  // If a severity is selected, both description and photo are required
+  if (!state.noDamage && state.damageSeverity) {
     const damageText = document.getElementById('damage-text').value.trim();
-    const hasDamage = state.damageSeverity || damageText;
-    if (hasDamage && state.photos.length === 0) {
+    if (!damageText) {
+      showToast('Please describe the damage in the text box.');
+      document.getElementById('damage-text').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.getElementById('damage-text').focus();
+      return;
+    }
+    if (state.photos.length === 0) {
       showToast('📷 Please add at least one photo to document the damage.');
       document.getElementById('photo-add-btn').scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
