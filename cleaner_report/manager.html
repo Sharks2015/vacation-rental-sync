@@ -469,9 +469,20 @@ function renderReports(reports) {
       ? `<div class="damage-box"><strong>⚠️ Damages, Smells &amp; Stains</strong><div style="margin-top:4px">${dmgText}</div></div>`
       : '';
 
+    const photoHtml = (r.photo_urls && r.photo_urls.length)
+      ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">${
+          r.photo_urls.map((url, i) =>
+            `<a href="${url}" target="_blank">
+              <img src="${url}" alt="Photo ${i+1}"
+                style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid #E5E7EB">
+            </a>`
+          ).join('')
+        }</div>`
+      : '';
+
     const footerItems = [];
-    if (r.photo_count > 0)
-      footerItems.push(`<span class="footer-pill blue">📷 ${r.photo_count} photo${r.photo_count !== 1 ? 's' : ''} — see email</span>`);
+    if (r.photo_count > 0 && !photoHtml)
+      footerItems.push(`<span class="footer-pill blue">📷 ${r.photo_count} photo${r.photo_count !== 1 ? 's' : ''}</span>`);
 
     const footer = footerItems.length
       ? `<div class="card-footer">${footerItems.join('')}</div>`
@@ -488,6 +499,7 @@ function renderReports(reports) {
         </div>
         <div class="supply-row">${supplyHtml}</div>
         ${damageHtml}
+        ${photoHtml}
         ${footer}
       </div>`;
   }).join('');

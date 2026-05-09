@@ -1,21 +1,18 @@
 import os
-import base64
-import smtplib
 import threading
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.image import MIMEImage
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-_ET = ZoneInfo("America/New_York")
-
+import cloudinary
+import cloudinary.uploader
 import requests
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request, send_from_directory
 from pyairtable import Api
 
 load_dotenv()
+
+_ET = ZoneInfo("America/New_York")
 
 BASEDIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__, static_folder=BASEDIR, static_url_path="")
@@ -33,6 +30,12 @@ def table(name):
 
 NOTIFY_EMAIL = os.getenv("NOTIFY_EMAIL", "hello@paradiseshinecleaning.com")
 GHL_WEBHOOK_URL = os.getenv("GHL_WEBHOOK_URL", "")
+
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME", ""),
+    api_key=os.getenv("CLOUDINARY_API_KEY", ""),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET", ""),
+)
 
 SUPPLY_LABELS = {
     "toilet_paper": "Toilet Paper",
@@ -121,14 +124,21 @@ def submit_report():
     photos = data.get("photos", [])
 
     def _process():
+        # Upload photos to Cloudinary first so we have URLs for everything else
+        photo_urls = _upload_photos(photos, property_name)
+
         manager = _get_property_manager(property_name)
+
         if GHL_WEBHOOK_URL:
             try:
-                _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage_notes, manager)
+                _forward_to_ghl(cleaner_name, property_name, fully_stocked,
+                                supplies, damage_notes, manager, photo_urls)
             except Exception as e:
                 print(f"GHL webhook error: {e}")
+
         try:
-            _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_notes, photos)
+            _save_report(cleaner_name, property_name, fully_stocked,
+                         supplies, damage_notes, photo_urls)
         except Exception as e:
             print(f"Save report error: {e}")
 
@@ -166,6 +176,9 @@ def manager_reports():
             prop = f.get("Property", "")
             if prop:
                 properties.add(prop)
+            # Extract photo URLs from Airtable attachments field
+            photo_attachments = f.get("Photos", [])
+            photo_urls = [a.get("url", "") for a in photo_attachments if a.get("url")]
             reports.append({
                 "property": prop,
                 "cleaner": f.get("Cleaner Name", ""),
@@ -174,6 +187,7 @@ def manager_reports():
                 "supplies_flagged": f.get("Supplies Flagged", ""),
                 "damage_notes": f.get("Damage Notes", ""),
                 "photo_count": f.get("Photo Count", 0),
+                "photo_urls": photo_urls,
             })
         return jsonify({"success": True, "reports": reports, "properties": sorted(properties)})
     except Exception as e:
@@ -206,7 +220,35 @@ def get_history():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-def _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_notes, photos):
+def _upload_photos(photos, property_name):
+    if not photos or not os.getenv("CLOUDINARY_CLOUD_NAME"):
+        return []
+    urls = []
+    timestamp = datetime.now(_ET).strftime("%Y%m%d_%H%M%S")
+    folder = f"psc/{property_name.replace(' ', '_').replace('/', '_')}/{timestamp}"
+    for i, photo_b64 in enumerate(photos):
+        if not photo_b64:
+            continue
+        try:
+            data = photo_b64.split(",", 1)[1] if "," in photo_b64 else photo_b64
+            result = cloudinary.uploader.upload(
+                f"data:image/jpeg;base64,{data}",
+                folder=folder,
+                public_id=f"photo_{i + 1}",
+                resource_type="image",
+                context=f"submitted_at={datetime.now(_ET).strftime('%Y-%m-%d %H:%M ET')}|property={property_name}",
+            )
+            urls.append(result["secure_url"])
+            print(f"[Cloudinary] photo {i + 1} uploaded → {result['secure_url']}")
+        except Exception as e:
+            print(f"[Cloudinary] photo {i + 1} error: {e}")
+    return urls
+
+
+STATUS_LABELS = {"running_low": "⚠️ Running Low", "completely_out": "🔴 Completely Out"}
+
+
+def _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_notes, photo_urls):
     flagged = "" if fully_stocked else ", ".join(
         f"{SUPPLY_LABELS.get(k, k)}: {STATUS_LABELS.get(v, v)}"
         for k, v in supplies.items() if v
@@ -216,12 +258,14 @@ def _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_no
         "Cleaner Name": cleaner_name,
         "Submitted At": datetime.now(_ET).strftime("%Y-%m-%d %H:%M"),
         "Fully Stocked": fully_stocked,
-        "Photo Count": len([p for p in photos if p]),
+        "Photo Count": len(photo_urls),
     }
     if flagged:
         record["Supplies Flagged"] = flagged
     if damage_notes:
         record["Damage Notes"] = damage_notes
+    if photo_urls:
+        record["Photos"] = [{"url": url} for url in photo_urls]
     table("Cleaning Reports").create(record)
 
 
@@ -252,124 +296,7 @@ def _get_property_manager(property_name):
         return {}
 
 
-STATUS_LABELS = {"running_low": "⚠️ Running Low", "completely_out": "🔴 Completely Out"}
-STATUS_COLORS = {"running_low": "#FEF3C7", "completely_out": "#FEE2E2"}
-
-
-def _supplies_html(fully_stocked, supplies):
-    if fully_stocked:
-        return "<p style='color:#059669;font-weight:600'>✅ All supplies fully stocked</p>"
-    if not supplies:
-        return "<p style='color:#6B7280'>No supply issues reported.</p>"
-    rows = "".join(
-        f"<tr style='background:{STATUS_COLORS.get(v,'white')}'>"
-        f"<td style='padding:8px 16px;border-bottom:1px solid #F3F4F6'>"
-        f"{SUPPLY_LABELS.get(k, k.replace('_',' ').title())}</td>"
-        f"<td style='padding:8px 16px;border-bottom:1px solid #F3F4F6;font-weight:600'>"
-        f"{STATUS_LABELS.get(v, v)}</td></tr>"
-        for k, v in supplies.items() if v
-    )
-    return (
-        "<table style='border-collapse:collapse;width:100%;max-width:420px;font-size:15px'>"
-        "<thead><tr style='background:#F3F4F6'>"
-        "<th style='padding:10px 16px;text-align:left'>Item</th>"
-        "<th style='padding:10px 16px;text-align:left'>Status</th>"
-        "</tr></thead>"
-        f"<tbody>{rows}</tbody></table>"
-    )
-
-
-def _build_email(cleaner_name, property_name, fully_stocked, supplies, damage_notes, photos, manager, recipient_email, recipient_name):
-    smtp_user = os.getenv("SMTP_USER", "")
-    subject = f"Cleaning Report — {property_name} — {datetime.now(_ET).strftime('%b %d, %Y')}"
-
-    mgr_line = ""
-    if manager:
-        mgr_line = (
-            f"<p><strong>Property Manager:</strong> {manager.get('name','')} &nbsp;|&nbsp; "
-            f"{manager.get('email','')} &nbsp;|&nbsp; {manager.get('phone','')}</p>"
-        )
-
-    dmg_section = ""
-    if damage_notes:
-        dmg_section = (
-            f"<div style='margin:20px 0;padding:16px;background:#FEF2F2;border-left:4px solid #EF4444;border-radius:8px'>"
-            f"<strong style='color:#B91C1C'>Damages, Smells &amp; Stains:</strong>"
-            f"<p style='margin:8px 0 0;color:#374151'>{damage_notes}</p></div>"
-        )
-
-    photo_tags = "".join(
-        f"<img src='cid:photo{i}' style='max-width:100%;border-radius:10px;margin-bottom:12px;display:block'>"
-        for i in range(len(photos))
-    )
-    photo_section = f"<h3 style='color:#1B3A6B'>Photos</h3>{photo_tags}" if photos else ""
-
-    html = f"""
-    <html><body style='font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;
-      color:#1F2937;max-width:600px;margin:auto;padding:24px'>
-      <div style='background:#1B3A6B;padding:24px;border-radius:12px 12px 0 0;text-align:center'>
-        <h1 style='color:white;margin:0;font-size:22px'>Paradise Shine Cleaning</h1>
-        <p style='color:#BFDBFE;margin:6px 0 0;font-size:14px'>Cleaning Report</p>
-      </div>
-      <div style='background:white;padding:24px;border:1px solid #E5E7EB;border-top:none;border-radius:0 0 12px 12px'>
-        <p><strong>Property:</strong> {property_name}</p>
-        <p><strong>Cleaner:</strong> {cleaner_name}</p>
-        <p><strong>Date:</strong> {datetime.now(_ET).strftime('%B %d, %Y at %I:%M %p')}</p>
-        {mgr_line}
-        <hr style='border:none;border-top:1px solid #E5E7EB;margin:20px 0'>
-        <h3 style='color:#1B3A6B'>Inventory</h3>
-        {_supplies_html(fully_stocked, supplies)}
-        {dmg_section}
-        {photo_section}
-      </div>
-    </body></html>
-    """
-
-    msg = MIMEMultipart("related")
-    msg["From"] = smtp_user
-    msg["To"] = recipient_email
-    msg["Subject"] = subject
-    msg.attach(MIMEText(html, "html"))
-
-    for i, photo_b64 in enumerate(photos):
-        try:
-            if "," in photo_b64:
-                photo_b64 = photo_b64.split(",", 1)[1]
-            img_bytes = base64.b64decode(photo_b64)
-            img = MIMEImage(img_bytes)
-            img.add_header("Content-ID", f"<photo{i}>")
-            img.add_header("Content-Disposition", "inline", filename=f"photo_{i+1}.jpg")
-            msg.attach(img)
-        except Exception as e:
-            print(f"Photo attach error [{i}]: {e}")
-
-    return msg
-
-
-def _send_email(cleaner_name, property_name, fully_stocked, supplies, damage_notes, photos, manager):
-    smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
-    smtp_port = int(os.getenv("SMTP_PORT", 587))
-    smtp_user = os.getenv("SMTP_USER", "")
-    smtp_pass = os.getenv("SMTP_PASSWORD", "")
-
-    manager_email = (manager.get("email", "") or "").strip() if manager else ""
-    print(f"[Email] To: {NOTIFY_EMAIL} | Cc: {manager_email or 'none'}")
-
-    msg = _build_email(
-        cleaner_name, property_name, fully_stocked, supplies,
-        damage_notes, photos, manager, NOTIFY_EMAIL, NOTIFY_EMAIL
-    )
-    if manager_email and manager_email.lower() != NOTIFY_EMAIL.lower():
-        msg["Cc"] = manager_email
-
-    with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as s:
-        s.starttls()
-        s.login(smtp_user, smtp_pass)
-        s.send_message(msg)
-        print(f"[Email] Sent OK")
-
-
-def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage_notes, manager):
+def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage_notes, manager, photo_urls):
     supply_summary = "Fully stocked" if fully_stocked else ", ".join(
         f"{SUPPLY_LABELS.get(k, k)}: {STATUS_LABELS.get(v, v)}"
         for k, v in supplies.items() if v
@@ -377,7 +304,7 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
 
     submitted_at = datetime.now(_ET).strftime("%B %d, %Y at %I:%M %p ET")
 
-    # Plain-text report body for GHL email template
+    # Plain-text report body for GHL email/SMS template
     lines = [
         f"Property: {property_name}",
         f"Cleaner: {cleaner_name}",
@@ -387,6 +314,13 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
     ]
     if damage_notes:
         lines += ["", "Damages / Smells / Stains:", damage_notes]
+
+    photo_links = ""
+    if photo_urls:
+        photo_lines = [f"Photo {i + 1}: {url}" for i, url in enumerate(photo_urls)]
+        photo_links = "\n".join(photo_lines)
+        lines += ["", "Photos:"] + photo_lines
+
     report_body = "\n".join(lines)
 
     base = {
@@ -395,19 +329,21 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
         "damage_notes": damage_notes or "None",
         "supplies_summary": supply_summary,
         "report_body": report_body,
+        "photo_links": photo_links or "No photos",
+        "photo_count": len(photo_urls),
         "submitted_at": submitted_at,
         "notify_email": NOTIFY_EMAIL,
     }
 
-    # Primary manager — GHL creates/updates contact, sends SMS + email
+    # Primary manager — GHL sends SMS + email
     requests.post(GHL_WEBHOOK_URL, json={**base,
         "manager_name": manager.get("name", ""),
         "manager_email": manager.get("email", ""),
         "manager_phone": manager.get("phone", ""),
     }, timeout=10)
-    print(f"[GHL] Webhook sent — manager: {manager.get('name','')} <{manager.get('email','')}>")
+    print(f"[GHL] Webhook sent — manager: {manager.get('name', '')} | photos: {len(photo_urls)}")
 
-    # CC phone (e.g. Jeanine) — second webhook so GHL texts them too
+    # CC phone (e.g. Jeanine) — second webhook for SMS only
     cc_phone = manager.get("cc_phone", "")
     if cc_phone:
         requests.post(GHL_WEBHOOK_URL, json={**base,
