@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 
 import cloudinary
 import cloudinary.uploader
+from cloudinary.utils import cloudinary_url
 import requests
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request, send_from_directory
@@ -224,22 +225,55 @@ def _upload_photos(photos, property_name):
     if not photos or not os.getenv("CLOUDINARY_CLOUD_NAME"):
         return []
     urls = []
-    timestamp = datetime.now(_ET).strftime("%Y%m%d_%H%M%S")
-    folder = f"psc/{property_name.replace(' ', '_').replace('/', '_')}/{timestamp}"
+    now_et = datetime.now(_ET)
+    ts_folder = now_et.strftime("%Y%m%d_%H%M%S")
+    # Visible stamp burned onto the image: "05/09/2026  10:30 PM ET | 931 SE 5th Ave"
+    prop_short = property_name[:35].replace("'", "").replace(",", "")
+    stamp_text = f"{now_et.strftime('%m/%d/%Y  %I:%M %p ET')}  |  {prop_short}"
+    folder = f"psc/{property_name.replace(' ', '_').replace('/', '_')}/{ts_folder}"
+
     for i, photo_b64 in enumerate(photos):
         if not photo_b64:
             continue
         try:
             data = photo_b64.split(",", 1)[1] if "," in photo_b64 else photo_b64
-            result = cloudinary.uploader.upload(
+            public_id = f"{folder}/photo_{i + 1}"
+
+            cloudinary.uploader.upload(
                 f"data:image/jpeg;base64,{data}",
-                folder=folder,
-                public_id=f"photo_{i + 1}",
+                public_id=public_id,
                 resource_type="image",
-                context=f"submitted_at={datetime.now(_ET).strftime('%Y-%m-%d %H:%M ET')}|property={property_name}",
+                format="jpg",
+                overwrite=True,
             )
-            urls.append(result["secure_url"])
-            print(f"[Cloudinary] photo {i + 1} uploaded → {result['secure_url']}")
+
+            # Burn timestamp + property name onto the image via Cloudinary transformation
+            stamped_url, _ = cloudinary_url(
+                public_id,
+                format="jpg",
+                secure=True,
+                transformation=[
+                    # Dark semi-transparent banner across the bottom
+                    {
+                        "overlay": {
+                            "font_family": "Arial",
+                            "font_size": 32,
+                            "font_weight": "bold",
+                            "text": stamp_text,
+                        },
+                        "background": "rgb:000000bb",
+                        "color": "white",
+                        "gravity": "south",
+                        "width": "1.0",
+                        "crop": "fit",
+                        "padding": 12,
+                        "y": 0,
+                    }
+                ],
+            )
+
+            urls.append(stamped_url)
+            print(f"[Cloudinary] photo {i + 1} stamped → {stamped_url}")
         except Exception as e:
             print(f"[Cloudinary] photo {i + 1} error: {e}")
     return urls
