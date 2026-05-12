@@ -31,43 +31,13 @@ logger = get_logger("main")
 
 
 def _notify_extension(event) -> None:
-    """Fire GHL webhook so owner gets SMS and owner + assistant get email."""
-    import requests
-
-    webhook_url = settings.EXTENSION_WEBHOOK_URL
-    if not webhook_url:
-        logger.warning("EXTENSION_WEBHOOK_URL not set — extension alert skipped for '%s'", event.property_name)
-        return
-
-    nights = event.nights_added
-    night_word = "night" if nights == 1 else "nights"
-    old_label = "today" if event.old_checkout == today() else format_date(event.old_checkout)
-
-    sms_body = (
-        f"STAY EXTENDED — {event.property_name}: "
-        f"{event.guest_name} was checking out {old_label}, "
-        f"now checks out {format_date(event.new_checkout)} (+{nights} {night_word}). "
-        f"Cleaning has been rescheduled."
-    )
-    payload = {
-        "event_type": "stay_extension",
-        "property_name": event.property_name,
-        "guest_name": event.guest_name,
-        "old_checkout": format_date(event.old_checkout),
-        "new_checkout": format_date(event.new_checkout),
-        "nights_added": nights,
-        "sms_body": sms_body,
-        "owner_phone": settings.OWNER_PHONE,
-        "owner_email": settings.OWNER_EMAIL,
-    }
-    try:
-        requests.post(webhook_url, json=payload, timeout=10)
+    """SMS owner directly via Twilio when a stay extension is detected."""
+    sent = twilio_sms.notify_extension(event)
+    if sent:
         logger.info(
-            "Extension alert sent — '%s': %s was %s, now %s",
+            "Extension SMS sent — '%s': %s was %s, now %s",
             event.property_name, event.guest_name, event.old_checkout, event.new_checkout,
         )
-    except Exception as e:
-        logger.error("Extension webhook failed for '%s': %s", event.property_name, e)
 
 
 def sync_property(prop):

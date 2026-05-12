@@ -22,10 +22,8 @@ TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
 TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER", "")
 
-# Extension alerts — routed through GHL (SMS to you + email to you and assistant)
-EXTENSION_WEBHOOK_URL = os.getenv("EXTENSION_WEBHOOK_URL", "")
-OWNER_PHONE = os.getenv("OWNER_PHONE", "")          # Your cell — GHL SMSes this
-OWNER_EMAIL = os.getenv("OWNER_EMAIL", "hello@paradiseshinecleaning.com")
+# Extension alerts — SMS sent directly via Twilio to owner's cell
+OWNER_PHONE = os.getenv("OWNER_PHONE", "")
 
 # Canva Connect API (optional — only needed for ad creative generation)
 CANVA_CLIENT_ID = os.getenv("CANVA_CLIENT_ID", "")

@@ -90,6 +90,22 @@ def notify_cancelled_booking(
         airtable_update_fn(task.airtable_id, task)
 
 
+def notify_extension(event) -> bool:
+    """Alert the owner directly when a stay extension is detected."""
+    if not settings.OWNER_PHONE:
+        logger.warning("OWNER_PHONE not set — extension SMS skipped")
+        return False
+    nights = event.nights_added
+    body = (
+        f"STAY EXTENDED — {event.property_name}: "
+        f"{event.guest_name} was checking out {format_date(event.old_checkout)}, "
+        f"now checks out {format_date(event.new_checkout)} "
+        f"(+{nights} night{'s' if nights != 1 else ''}). "
+        f"Cleaning has been rescheduled."
+    )
+    return _send(settings.OWNER_PHONE, body)
+
+
 def notify_same_day_turnover(
     task: CleaningTask,
     airtable_update_fn,
