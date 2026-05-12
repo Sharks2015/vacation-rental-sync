@@ -90,6 +90,19 @@ def notify_cancelled_booking(
         airtable_update_fn(task.airtable_id, task)
 
 
+def notify_extension(event, manager_phone: str) -> bool:
+    """Alert the manager when a stay extension is detected. No idempotency gate
+    here — the caller (main.py) only fires this for newly-detected extensions."""
+    body = (
+        f"STAY EXTENDED at {event.property_name}: "
+        f"{event.guest_name} was checking out {format_date(event.old_checkout)}, "
+        f"now checks out {format_date(event.new_checkout)} "
+        f"(+{event.nights_added} night{'s' if event.nights_added != 1 else ''}). "
+        f"Cleaning on {format_date(event.old_checkout)} has been cancelled automatically."
+    )
+    return _send(manager_phone, body)
+
+
 def notify_same_day_turnover(
     task: CleaningTask,
     airtable_update_fn,

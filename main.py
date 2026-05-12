@@ -22,11 +22,44 @@ from sync.cleaning_scheduler import (
     apply_modified_booking,
     apply_new_booking,
 )
+from sync.extension_detector import detect_extensions
 from sync.turnover_detector import detect_and_flag
-from utils.date_helpers import today
+from utils.date_helpers import format_date, today
 from utils.logger import get_logger
 
 logger = get_logger("main")
+
+
+def _notify_extension(event) -> None:
+    """Send manager SMS + optional GHL webhook when a stay extension is detected."""
+    import requests
+
+    # SMS via Twilio
+    if settings.MANAGER_ALERT_PHONE:
+        twilio_sms.notify_extension(event, settings.MANAGER_ALERT_PHONE)
+
+    # GHL webhook (triggers email + SMS workflow in GoHighLevel)
+    webhook_url = settings.EXTENSION_WEBHOOK_URL or settings.GHL_WEBHOOK_URL
+    if webhook_url:
+        payload = {
+            "event_type": "stay_extension",
+            "property_name": event.property_name,
+            "guest_name": event.guest_name,
+            "old_checkout": str(event.old_checkout),
+            "new_checkout": str(event.new_checkout),
+            "nights_added": event.nights_added,
+            "message": (
+                f"Stay extended at {event.property_name}: "
+                f"{event.guest_name} was checking out {format_date(event.old_checkout)}, "
+                f"now checks out {format_date(event.new_checkout)} "
+                f"(+{event.nights_added} night{'s' if event.nights_added != 1 else ''})."
+            ),
+        }
+        try:
+            requests.post(webhook_url, json=payload, timeout=10)
+            logger.info("Extension webhook sent for '%s'", event.property_name)
+        except Exception as e:
+            logger.error("Extension webhook failed: %s", e)
 
 
 def sync_property(prop):
@@ -59,6 +92,12 @@ def sync_property(prop):
 
     # Step 3: Diff
     result = diff(fetched_bookings, existing_bookings)
+
+    # Step 3b: Detect stay extensions before writing to Airtable.
+    # An extension looks like: old UID cancelled + new UID at same property,
+    # same guest, same/earlier check-in, later checkout — all in one sync run.
+    extensions = detect_extensions(result.cancelled, result.new)
+    extension_old_uids = {e.old_booking.uid for e in extensions}
 
     # Step 4: Upsert bookings into Airtable
     for booking in result.new + result.modified:
@@ -137,6 +176,10 @@ def sync_property(prop):
     for task in same_day_tasks:
         if not any(task.booking_uid == t.booking_uid for t, _ in new_tasks):
             twilio_sms.notify_same_day_turnover(task, airtable.update_task)
+
+    # Step 9: Alert manager on stay extensions
+    for event in extensions:
+        _notify_extension(event)
 
     logger.info("Finished syncing '%s'", prop.name)
 
