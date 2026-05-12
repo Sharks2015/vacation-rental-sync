@@ -8,6 +8,8 @@ This script is fully idempotent. Running it multiple times produces no
 duplicate records or duplicate SMS messages.
 """
 import sys
+import urllib.request
+import json
 from datetime import timedelta
 
 from config import settings
@@ -31,13 +33,42 @@ logger = get_logger("main")
 
 
 def _notify_extension(event) -> None:
-    """SMS owner directly via Twilio when a stay extension is detected."""
-    sent = twilio_sms.notify_extension(event)
-    if sent:
-        logger.info(
-            "Extension SMS sent — '%s': %s was %s, now %s",
-            event.property_name, event.guest_name, event.old_checkout, event.new_checkout,
-        )
+    """Alert owner via GHL webhook when a stay extension is detected."""
+    nights = event.nights_added
+    body = (
+        f"STAY EXTENDED — {event.property_name}: "
+        f"{event.guest_name} was checking out {format_date(event.old_checkout)}, "
+        f"now checks out {format_date(event.new_checkout)} "
+        f"(+{nights} night{'s' if nights != 1 else ''}). "
+        f"Cleaning has been rescheduled."
+    )
+    if settings.EXTENSION_WEBHOOK_URL:
+        try:
+            payload = json.dumps({
+                "owner_phone": settings.OWNER_PHONE,
+                "owner_email": settings.OWNER_EMAIL,
+                "sms_body": body,
+            }).encode()
+            req = urllib.request.Request(
+                settings.EXTENSION_WEBHOOK_URL,
+                data=payload,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                logger.info(
+                    "Extension alert sent via GHL — '%s': %s → %s",
+                    event.property_name, event.old_checkout, event.new_checkout,
+                )
+        except Exception as e:
+            logger.error("Failed to send extension alert via GHL: %s", e)
+    else:
+        sent = twilio_sms.notify_extension(event)
+        if sent:
+            logger.info(
+                "Extension SMS sent via Twilio — '%s': %s → %s",
+                event.property_name, event.old_checkout, event.new_checkout,
+            )
 
 
 def sync_property(prop):

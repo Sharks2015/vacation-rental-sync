@@ -10,12 +10,18 @@ from config import settings
 api = Api(settings.AIRTABLE_API_KEY)
 table = api.table(settings.AIRTABLE_BASE_ID, "Properties")
 
-record = table.create({
-    "Name": "258 Avalon Ave Lauderdale-By-The-Sea",
-    "ical URL": "https://www.lodgify.com/7b999f93-bb48-4018-84a2-30577b4db741.ics",
-    "Default Checkout Time": "10:00",
-    "Default Checkin Time": "16:00",
-    "Turnover Time Hours": 3,
-})
+properties = [
+    {
+        "Name": "511 S K St Lake Worth",
+        "ical URL": "https://hostex.io/web/ical/12595102.ics?t=20921b399d3fe2fc96323e62d768442f",
+        "Address": "511 S K St, Lake Worth, FL",
+        "Default Checkout Time": "11:00",
+        "Default Checkin Time": "15:00",
+        "Turnover Time Hours": 4,
+        "Active ": "Checked",
+    },
+]
 
-print(f"Created: {record['id']} — {record['fields']['Name']}")
+for p in properties:
+    record = table.create(p)
+    print(f"Created: {record['id']} — {record['fields']['Name']}")

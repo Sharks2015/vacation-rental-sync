@@ -21,9 +21,10 @@ _BLOCK_PATTERNS = [
 ]
 _BLOCK_RE = re.compile("|".join(_BLOCK_PATTERNS), re.IGNORECASE)
 
-# Airbnb reservation summaries look like:
-#   "Reserved" or "Reservation - John Smith" or "John Smith"
-_GUEST_RE = re.compile(r"(?:Reservation\s*[-–]\s*|Reserved\s*[-–]\s*)?(.+)", re.IGNORECASE)
+# Airbnb:  "Reservation - John Smith" or "Reserved - John Smith" or "John Smith"
+# Hostex:  "Reserved: John Smith N guests"
+_GUEST_RE = re.compile(r"(?:Reservation\s*[-–:]\s*|Reserved\s*[-–:]\s*)?(.+)", re.IGNORECASE)
+_TRAILING_NOISE_RE = re.compile(r"\s+\d+\s+guests?\s*$", re.IGNORECASE)
 
 
 def _extract_guest_name(summary: str) -> str:
@@ -32,7 +33,9 @@ def _extract_guest_name(summary: str) -> str:
         name = m.group(1).strip()
         # Strip trailing parenthetical noise like "(Airbnb)"
         name = re.sub(r"\s*\(.*\)\s*$", "", name)
-        return name or "Unknown Guest"
+        # Strip Hostex trailing "N guests" suffix
+        name = _TRAILING_NOISE_RE.sub("", name)
+        return name.strip() or "Unknown Guest"
     return "Unknown Guest"
 
 
