@@ -35,6 +35,7 @@ jobs:
           SYNC_LOOKAHEAD_DAYS: "90"
           SYNC_LOOKBACK_DAYS: "1"
           EXTENSION_WEBHOOK_URL: ${{ secrets.EXTENSION_WEBHOOK_URL }}
+          NEW_CLEAN_WEBHOOK_URL: ${{ secrets.NEW_CLEAN_WEBHOOK_URL }}
           OWNER_PHONE: ${{ secrets.OWNER_PHONE }}
           OWNER_EMAIL: ${{ secrets.OWNER_EMAIL }}
         run: python main.py

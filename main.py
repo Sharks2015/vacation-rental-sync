@@ -71,6 +71,37 @@ def _notify_extension(event) -> None:
             )
 
 
+def _notify_new_clean(task, booking) -> None:
+    """Email owner via GHL when a new cleaning task is created."""
+    if not settings.NEW_CLEAN_WEBHOOK_URL:
+        return
+    subject = f"New Clean Scheduled — {task.property_name}"
+    body = (
+        f"Property: {task.property_name}\n"
+        f"Guest: {booking.guest_name}\n"
+        f"Cleaning Date: {format_date(task.cleaning_date)}\n"
+        f"Time: {task.cleaning_start_time} – {task.cleaning_end_time}\n"
+        f"Cleaner: {task.cleaner_name or 'TBD'}"
+    )
+    try:
+        payload = json.dumps({
+            "owner_phone": settings.OWNER_PHONE,
+            "owner_email": settings.OWNER_EMAIL,
+            "email_subject": subject,
+            "email_body": body,
+        }).encode()
+        req = urllib.request.Request(
+            settings.NEW_CLEAN_WEBHOOK_URL,
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=10):
+            logger.info("New clean email sent — '%s' on %s", task.property_name, task.cleaning_date)
+    except Exception as e:
+        logger.error("Failed to send new clean email via GHL: %s", e)
+
+
 def sync_property(prop):
     logger.info("=== Syncing property: %s ===", prop.name)
 
@@ -198,9 +229,13 @@ def sync_property(prop):
         if not any(task.booking_uid == t.booking_uid for t, _ in new_tasks):
             twilio_sms.notify_same_day_turnover(task, airtable.update_task)
 
-    # Step 9: Alert manager on stay extensions
+    # Step 9: Alert owner on stay extensions
     for event in extensions:
         _notify_extension(event)
+
+    # Step 10: Email owner for each new cleaning task
+    for task, booking in new_tasks:
+        _notify_new_clean(task, booking)
 
     logger.info("Finished syncing '%s'", prop.name)
 
