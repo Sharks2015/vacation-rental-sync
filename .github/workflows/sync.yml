@@ -34,4 +34,7 @@ jobs:
           GOOGLE_SERVICE_ACCOUNT_FILE: service_account.json
           SYNC_LOOKAHEAD_DAYS: "90"
           SYNC_LOOKBACK_DAYS: "1"
+          EXTENSION_WEBHOOK_URL: ${{ secrets.EXTENSION_WEBHOOK_URL }}
+          OWNER_PHONE: ${{ secrets.OWNER_PHONE }}
+          OWNER_EMAIL: ${{ secrets.OWNER_EMAIL }}
         run: python main.py

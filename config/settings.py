@@ -26,7 +26,6 @@ TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER", "")
 EXTENSION_WEBHOOK_URL = os.getenv("EXTENSION_WEBHOOK_URL", "")
 OWNER_PHONE = os.getenv("OWNER_PHONE", "")          # Your cell — GHL SMSes this
 OWNER_EMAIL = os.getenv("OWNER_EMAIL", "hello@paradiseshinecleaning.com")
-ASSISTANT_EMAIL = os.getenv("ASSISTANT_EMAIL", "")
 
 # Canva Connect API (optional — only needed for ad creative generation)
 CANVA_CLIENT_ID = os.getenv("CANVA_CLIENT_ID", "")

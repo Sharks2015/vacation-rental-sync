@@ -59,7 +59,6 @@ def _notify_extension(event) -> None:
         "sms_body": sms_body,
         "owner_phone": settings.OWNER_PHONE,
         "owner_email": settings.OWNER_EMAIL,
-        "assistant_email": settings.ASSISTANT_EMAIL,
     }
     try:
         requests.post(webhook_url, json=payload, timeout=10)
