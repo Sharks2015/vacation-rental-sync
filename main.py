@@ -31,35 +31,44 @@ logger = get_logger("main")
 
 
 def _notify_extension(event) -> None:
-    """Send manager SMS + optional GHL webhook when a stay extension is detected."""
+    """Fire GHL webhook so owner gets SMS and owner + assistant get email."""
     import requests
 
-    # SMS via Twilio
-    if settings.MANAGER_ALERT_PHONE:
-        twilio_sms.notify_extension(event, settings.MANAGER_ALERT_PHONE)
+    webhook_url = settings.EXTENSION_WEBHOOK_URL
+    if not webhook_url:
+        logger.warning("EXTENSION_WEBHOOK_URL not set — extension alert skipped for '%s'", event.property_name)
+        return
 
-    # GHL webhook (triggers email + SMS workflow in GoHighLevel)
-    webhook_url = settings.EXTENSION_WEBHOOK_URL or settings.GHL_WEBHOOK_URL
-    if webhook_url:
-        payload = {
-            "event_type": "stay_extension",
-            "property_name": event.property_name,
-            "guest_name": event.guest_name,
-            "old_checkout": str(event.old_checkout),
-            "new_checkout": str(event.new_checkout),
-            "nights_added": event.nights_added,
-            "message": (
-                f"Stay extended at {event.property_name}: "
-                f"{event.guest_name} was checking out {format_date(event.old_checkout)}, "
-                f"now checks out {format_date(event.new_checkout)} "
-                f"(+{event.nights_added} night{'s' if event.nights_added != 1 else ''})."
-            ),
-        }
-        try:
-            requests.post(webhook_url, json=payload, timeout=10)
-            logger.info("Extension webhook sent for '%s'", event.property_name)
-        except Exception as e:
-            logger.error("Extension webhook failed: %s", e)
+    nights = event.nights_added
+    night_word = "night" if nights == 1 else "nights"
+    old_label = "today" if event.old_checkout == today() else format_date(event.old_checkout)
+
+    sms_body = (
+        f"STAY EXTENDED — {event.property_name}: "
+        f"{event.guest_name} was checking out {old_label}, "
+        f"now checks out {format_date(event.new_checkout)} (+{nights} {night_word}). "
+        f"Cleaning has been rescheduled."
+    )
+    payload = {
+        "event_type": "stay_extension",
+        "property_name": event.property_name,
+        "guest_name": event.guest_name,
+        "old_checkout": format_date(event.old_checkout),
+        "new_checkout": format_date(event.new_checkout),
+        "nights_added": nights,
+        "sms_body": sms_body,
+        "owner_phone": settings.OWNER_PHONE,
+        "owner_email": settings.OWNER_EMAIL,
+        "assistant_email": settings.ASSISTANT_EMAIL,
+    }
+    try:
+        requests.post(webhook_url, json=payload, timeout=10)
+        logger.info(
+            "Extension alert sent — '%s': %s was %s, now %s",
+            event.property_name, event.guest_name, event.old_checkout, event.new_checkout,
+        )
+    except Exception as e:
+        logger.error("Extension webhook failed for '%s': %s", event.property_name, e)
 
 
 def sync_property(prop):
@@ -136,6 +145,18 @@ def sync_property(prop):
         )
         if task:
             cancelled_tasks.append((task, booking))
+
+    # Step 5b: Re-label extended tasks in Airtable so they show "Extended"
+    # instead of "Cancelled" — makes it instantly clear in today's task view.
+    # Requires "Extended" to be a Select option in the Cleaning Tasks Status field.
+    for task, booking in cancelled_tasks:
+        if booking.uid in extension_old_uids and task.airtable_id:
+            try:
+                task.status = "Extended"
+                airtable.update_task(task.airtable_id, task)
+                logger.info("Marked task as Extended for booking %s at '%s'", booking.uid, prop.name)
+            except Exception as e:
+                logger.error("Could not set Extended status (add 'Extended' option to Airtable Status field): %s", e)
 
     # Step 6: Re-run turnover detection on the full confirmed set
     all_current_bookings = [

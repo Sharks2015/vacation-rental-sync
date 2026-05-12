@@ -22,11 +22,11 @@ TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
 TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER", "")
 
-# Manager alert phone — receives extension/anomaly notifications (not cleaner SMS)
-MANAGER_ALERT_PHONE = os.getenv("MANAGER_ALERT_PHONE", "")
-
-# GHL webhook for extension events (optional — if set, sends email+SMS via GHL)
+# Extension alerts — routed through GHL (SMS to you + email to you and assistant)
 EXTENSION_WEBHOOK_URL = os.getenv("EXTENSION_WEBHOOK_URL", "")
+OWNER_PHONE = os.getenv("OWNER_PHONE", "")          # Your cell — GHL SMSes this
+OWNER_EMAIL = os.getenv("OWNER_EMAIL", "hello@paradiseshinecleaning.com")
+ASSISTANT_EMAIL = os.getenv("ASSISTANT_EMAIL", "")
 
 # Canva Connect API (optional — only needed for ad creative generation)
 CANVA_CLIENT_ID = os.getenv("CANVA_CLIENT_ID", "")
