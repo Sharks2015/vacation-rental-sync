@@ -101,6 +101,7 @@ SUPPLY_LABELS = {
     "sugar_packets": "Sugar Packets",
     "sweetener_packets": "Sweetener Packets",
     "coffee_stir_sticks": "Coffee Stir Sticks",
+    "tea": "Tea Bags",
 }
 
 
