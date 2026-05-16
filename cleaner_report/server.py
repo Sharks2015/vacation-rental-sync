@@ -93,6 +93,14 @@ SUPPLY_LABELS = {
     "soap_bottles": "Soap Bottles",
     "lotion_bottles": "Lotion Bottles",
     "toiletry_bags": "Toiletry Bags",
+    "cups": "Cups",
+    "lids": "Lids",
+    "cup_warmers": "Cup Warmers",
+    "coffee_pods": "Coffee Pods",
+    "coffee_creamer": "Coffee Creamer",
+    "sugar_packets": "Sugar Packets",
+    "sweetener_packets": "Sweetener Packets",
+    "coffee_stir_sticks": "Coffee Stir Sticks",
 }
 
 
