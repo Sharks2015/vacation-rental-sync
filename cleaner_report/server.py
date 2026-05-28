@@ -164,10 +164,29 @@ def submit_report():
     photos = data.get("photos", [])
 
     def _process():
-        # Upload photos to Cloudinary first so we have URLs for everything else
+        manager = _get_property_manager(property_name)
+
+        # Save report to Airtable immediately with no photos so it's never lost
+        record_id = None
+        try:
+            record_id = _save_report(cleaner_name, property_name, fully_stocked,
+                                     supplies, damage_notes, smell_notes, [])
+        except Exception as e:
+            print(f"Save report error: {e}")
+
+        # Upload photos — this may take time; done after saving so report is never blocked
         photo_urls = _upload_photos(photos, property_name)
 
-        manager = _get_property_manager(property_name)
+        # Update the record with photo URLs if we got any
+        if photo_urls and record_id:
+            try:
+                table("Cleaning Reports").update(record_id, {
+                    "Photo Count": len(photo_urls),
+                    "Photos": [{"url": u} for u in photo_urls],
+                })
+                print(f"[Airtable] Updated record {record_id} with {len(photo_urls)} photos")
+            except Exception as e:
+                print(f"[Airtable] Photo update error: {e}")
 
         if GHL_WEBHOOK_URL:
             try:
@@ -175,12 +194,6 @@ def submit_report():
                                 supplies, damage_notes, smell_notes, manager, photo_urls)
             except Exception as e:
                 print(f"GHL webhook error: {e}")
-
-        try:
-            _save_report(cleaner_name, property_name, fully_stocked,
-                         supplies, damage_notes, smell_notes, photo_urls)
-        except Exception as e:
-            print(f"Save report error: {e}")
 
     threading.Thread(target=_process, daemon=False).start()
     return jsonify({"success": True})
@@ -371,7 +384,8 @@ def _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_no
         record["Damage Notes"] = combined_notes
     if photo_urls:
         record["Photos"] = [{"url": url} for url in photo_urls]
-    table("Cleaning Reports").create(record)
+    result = table("Cleaning Reports").create(record)
+    return result["id"]
 
 
 def _get_property_manager(property_name):
