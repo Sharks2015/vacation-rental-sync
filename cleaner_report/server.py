@@ -302,46 +302,47 @@ def _upload_photos(photos, property_name):
         if not photo_b64:
             continue
         try:
-            data = photo_b64.split(",", 1)[1] if "," in photo_b64 else photo_b64
+            raw = photo_b64.split(",", 1)[1] if "," in photo_b64 else photo_b64
             public_id = f"{folder}/photo_{i + 1}"
 
-            cloudinary.uploader.upload(
-                f"data:image/jpeg;base64,{data}",
+            result = cloudinary.uploader.upload(
+                f"data:image/jpeg;base64,{raw}",
                 public_id=public_id,
                 resource_type="image",
                 format="jpg",
                 overwrite=True,
             )
+            plain_url = result.get("secure_url", "")
+            print(f"[Cloudinary] photo {i + 1} uploaded → {plain_url}")
 
-            # Burn timestamp + property name onto the image via Cloudinary transformation
-            stamped_url, _ = cloudinary_url(
-                public_id,
-                format="jpg",
-                secure=True,
-                transformation=[
-                    # Dark semi-transparent banner across the bottom
-                    {
+            # Try to add timestamp/property stamp — fall back to plain URL if it fails
+            try:
+                stamped_url, _ = cloudinary_url(
+                    public_id,
+                    format="jpg",
+                    secure=True,
+                    transformation=[{
                         "overlay": {
                             "font_family": "Arial",
-                            "font_size": 32,
+                            "font_size": 28,
                             "font_weight": "bold",
                             "text": stamp_text,
                         },
                         "background": "rgb:000000bb",
                         "color": "white",
                         "gravity": "south",
-                        "width": "1.0",
+                        "width": 1.0,
                         "crop": "fit",
-                        "padding": 12,
-                        "y": 0,
-                    }
-                ],
-            )
+                        "y": 8,
+                    }],
+                )
+                urls.append(stamped_url)
+            except Exception as stamp_err:
+                print(f"[Cloudinary] stamp failed, using plain URL: {stamp_err}")
+                urls.append(plain_url)
 
-            urls.append(stamped_url)
-            print(f"[Cloudinary] photo {i + 1} stamped → {stamped_url}")
         except Exception as e:
-            print(f"[Cloudinary] photo {i + 1} error: {e}")
+            print(f"[Cloudinary] photo {i + 1} upload error: {e}")
     return urls
 
 
