@@ -1,1 +1,1 @@
-web: gunicorn cleaner_report.server:app --timeout 120 --workers 2
+web: gunicorn cleaner_report.server:app --timeout 120 --workers 1

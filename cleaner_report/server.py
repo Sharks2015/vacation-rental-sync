@@ -163,31 +163,18 @@ def submit_report():
     smell_notes = data.get("smell_notes", "")
     photos = data.get("photos", [])
 
-    def _process():
-        # 1. Save report immediately — never blocked by photos or manager lookup
-        record_id = None
-        try:
-            record_id = _save_report(cleaner_name, property_name, fully_stocked,
-                                     supplies, damage_notes, smell_notes, [])
-            print(f"[Report] Saved to Airtable: {record_id}")
-        except Exception as e:
-            print(f"[Report] Save error: {e}")
+    # Upload photos first (Cloudinary is now working)
+    photo_urls = _upload_photos(photos, property_name)
 
-        # 2. Upload photos to Cloudinary
-        photo_urls = _upload_photos(photos, property_name)
+    # Save report to Airtable
+    try:
+        _save_report(cleaner_name, property_name, fully_stocked,
+                     supplies, damage_notes, smell_notes, photo_urls)
+    except Exception as e:
+        print(f"[Report] Save error: {e}")
 
-        # 3. Update record with photo URLs
-        if photo_urls and record_id:
-            try:
-                table("Cleaning Reports").update(record_id, {
-                    "Photo Count": len(photo_urls),
-                    "Photos": [{"url": u} for u in photo_urls],
-                })
-                print(f"[Airtable] Updated {record_id} with {len(photo_urls)} photos")
-            except Exception as e:
-                print(f"[Airtable] Photo update error: {e}")
-
-        # 4. Get manager and send GHL webhook
+    # Send GHL webhook in background so response isn't delayed
+    def _notify():
         manager = _get_property_manager(property_name)
         if GHL_WEBHOOK_URL:
             try:
@@ -196,7 +183,7 @@ def submit_report():
             except Exception as e:
                 print(f"GHL webhook error: {e}")
 
-    threading.Thread(target=_process, daemon=False).start()
+    threading.Thread(target=_notify, daemon=True).start()
     return jsonify({"success": True})
 
 
