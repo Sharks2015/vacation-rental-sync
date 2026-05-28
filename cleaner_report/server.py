@@ -485,25 +485,29 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
         supply_summary = ", ".join(f"{label}: {status}" for label, status in flagged) or "No issues"
         stock_line = f"Low: {supply_summary[:80]}"
 
-    # Use Yes/None for damage and smell — never include actual text in SMS
-    # (carriers block messages containing drug/substance words like "marijuana")
-    damage_flag = "Yes - see Airtable" if damage_notes else "None"
-    smell_flag = "Yes - see Airtable" if smell_notes else "None"
-
     # Build short URLs once
     short_urls = [_shorten_url(url) for url in photo_urls] if photo_urls else []
     photo_links = "\n".join(f"Photo {i+1}: {u}" for i, u in enumerate(short_urls))
 
-    # SMS 1: report summary only (no photos) — always fits under 320
-    summary_body = "\n".join([
-        f"{short_date} | Stock: {stock_line}",
-        f"Damage: {damage_flag} | Smell: {smell_flag}",
-    ])
+    # SMS 1: date + full inventory list + smell (always sent)
+    if fully_stocked:
+        inventory_sms = "Stock: All Good"
+    else:
+        item_lines = "\n".join(f"• {label}: {status}" for label, status in flagged) if flagged else "• No issues"
+        inventory_sms = f"Stock: Low:\n{item_lines}"
 
-    # SMS 2: photo links only — sent as a separate webhook if photos exist
-    photo_body = None
-    if short_urls:
-        photo_body = "Photos:\n" + "\n".join(u.replace("https://", "") for u in short_urls)
+    smell_sms = f"Smell: {(_strip(smell_notes) or '')[:80]}" if smell_notes else "Smell: None"
+    summary_body = f"{short_date}\n{inventory_sms}\n{smell_sms}"
+
+    # SMS 2: damage notes + photos — only sent if damage or photos exist
+    damage_body = None
+    if damage_notes or short_urls:
+        parts = []
+        if damage_notes:
+            parts.append(f"Damage:\n{(_strip(damage_notes) or '')[:120]}")
+        if short_urls:
+            parts.append("Photos:\n" + "\n".join(u.replace("https://", "") for u in short_urls))
+        damage_body = "\n\n".join(parts)
 
     base = {
         "cleaner_name": cleaner_name,
@@ -521,9 +525,9 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
         payload = {**base, "manager_name": name, "manager_email": email, "manager_phone": phone}
         r = requests.post(GHL_WEBHOOK_URL, json={**payload, "report_body": summary_body}, timeout=10)
         print(f"[GHL] {label} summary → {r.status_code} | phone={phone}")
-        if photo_body:
-            r2 = requests.post(GHL_WEBHOOK_URL, json={**payload, "report_body": photo_body}, timeout=10)
-            print(f"[GHL] {label} photos → {r2.status_code}")
+        if damage_body:
+            r2 = requests.post(GHL_WEBHOOK_URL, json={**payload, "report_body": damage_body}, timeout=10)
+            print(f"[GHL] {label} damage/photos → {r2.status_code}")
 
     _send(manager.get("name", ""), manager.get("email", ""), manager.get("phone", ""), "primary")
 
