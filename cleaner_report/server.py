@@ -187,6 +187,23 @@ def submit_report():
     return jsonify({"success": True})
 
 
+@app.route("/test-airtable")
+def test_airtable():
+    try:
+        result = table("Cleaning Reports").create({
+            "Property": "TEST - IGNORE",
+            "Cleaner Name": "Diagnostic",
+            "Submitted At": "2000-01-01 00:00",
+            "Fully Stocked": True,
+            "Photo Count": 0,
+        })
+        record_id = result["id"]
+        table("Cleaning Reports").delete(record_id)
+        return jsonify({"ok": True, "record_id": record_id})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
 @app.route("/check-env")
 def check_env():
     return jsonify({
