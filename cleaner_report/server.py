@@ -483,25 +483,25 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
     else:
         flagged = [(SUPPLY_LABELS.get(k, k), STATUS_LABELS.get(v, v)) for k, v in supplies.items() if v]
         supply_summary = ", ".join(f"{label}: {status}" for label, status in flagged) or "No issues"
-        stock_line = f"Low: {supply_summary[:60]}"
+        stock_line = f"Low: {supply_summary[:80]}"
 
-    damage_text = (_strip(damage_notes) or "")[:60] if damage_notes else "None"
-    smell_text = (_strip(smell_notes) or "")[:40] if smell_notes else "None"
+    damage_text = (_strip(damage_notes) or "")[:80] if damage_notes else "None"
+    smell_text = (_strip(smell_notes) or "")[:50] if smell_notes else "None"
 
-    # Build short URLs once — used in both compact SMS body and photo_links field
+    # Build short URLs once
     short_urls = [_shorten_url(url) for url in photo_urls] if photo_urls else []
     photo_links = "\n".join(f"Photo {i+1}: {u}" for i, u in enumerate(short_urls))
 
-    # Compact body — must stay under ~200 chars so total SMS stays under 320
-    sms_lines = [
+    # SMS 1: report summary only (no photos) — always fits under 320
+    summary_body = "\n".join([
         f"{short_date} | Stock: {stock_line}",
         f"Damage: {damage_text} | Smell: {smell_text}",
-    ]
-    if short_urls:
-        # Drop "https://" to save 8 chars per URL
-        sms_lines.append("Photos: " + " ".join(u.replace("https://", "") for u in short_urls))
+    ])
 
-    report_body = "\n".join(sms_lines)
+    # SMS 2: photo links only — sent as a separate webhook if photos exist
+    photo_body = None
+    if short_urls:
+        photo_body = "Photos:\n" + "\n".join(u.replace("https://", "") for u in short_urls)
 
     base = {
         "cleaner_name": cleaner_name,
@@ -509,30 +509,25 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
         "damage_notes": damage_notes,
         "smell_notes": smell_notes,
         "supplies_summary": supply_summary,
-        "report_body": report_body,
         "photo_links": photo_links or "No photos",
         "photo_count": len(photo_urls),
         "submitted_at": submitted_at,
         "notify_email": NOTIFY_EMAIL,
     }
 
-    # Primary manager — GHL sends SMS + email
-    r1 = requests.post(GHL_WEBHOOK_URL, json={**base,
-        "manager_name": manager.get("name", ""),
-        "manager_email": manager.get("email", ""),
-        "manager_phone": manager.get("phone", ""),
-    }, timeout=10)
-    print(f"[GHL] Primary webhook → status={r1.status_code} body={r1.text[:200]} | manager={manager.get('name','')} phone={manager.get('phone','')} | photos={len(photo_urls)}")
+    def _send(name, email, phone, label):
+        payload = {**base, "manager_name": name, "manager_email": email, "manager_phone": phone}
+        r = requests.post(GHL_WEBHOOK_URL, json={**payload, "report_body": summary_body}, timeout=10)
+        print(f"[GHL] {label} summary → {r.status_code} | phone={phone}")
+        if photo_body:
+            r2 = requests.post(GHL_WEBHOOK_URL, json={**payload, "report_body": photo_body}, timeout=10)
+            print(f"[GHL] {label} photos → {r2.status_code}")
 
-    # CC phone — second webhook for SMS only
+    _send(manager.get("name", ""), manager.get("email", ""), manager.get("phone", ""), "primary")
+
     cc_phone = manager.get("cc_phone", "")
     if cc_phone:
-        r2 = requests.post(GHL_WEBHOOK_URL, json={**base,
-            "manager_name": "CC",
-            "manager_email": "",
-            "manager_phone": cc_phone,
-        }, timeout=10)
-        print(f"[GHL] CC webhook → status={r2.status_code} body={r2.text[:200]} | cc_phone={cc_phone}")
+        _send("CC", "", cc_phone, "CC")
 
 
 if __name__ == "__main__":
