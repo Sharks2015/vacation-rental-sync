@@ -186,6 +186,30 @@ def submit_report():
     return jsonify({"success": True})
 
 
+@app.route("/test-cloudinary")
+def test_cloudinary():
+    import base64
+    if not _cloud_ok:
+        return jsonify({"ok": False, "error": "Cloudinary env vars missing"})
+    # 1x1 white JPEG
+    pixel = base64.b64decode(
+        "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8U"
+        "HRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA"
+        "Ax8AAf/EABQAAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFBAB"
+        "AAAAAAAAAAAAAAAAAAAAAP/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAT8AUMP/2Q=="
+    )
+    try:
+        result = cloudinary.uploader.upload(
+            f"data:image/jpeg;base64,{base64.b64encode(pixel).decode()}",
+            public_id="psc/test/diagnostic",
+            resource_type="image",
+            overwrite=True,
+        )
+        return jsonify({"ok": True, "url": result.get("secure_url", "")})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
 MANAGER_PIN = os.getenv("MANAGER_PIN", "")
 
 
