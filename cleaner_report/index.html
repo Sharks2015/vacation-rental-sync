@@ -945,6 +945,13 @@ document.querySelector('.severity-row').addEventListener('click', e => {
   document.querySelectorAll('.severity-btn').forEach(b => {
     b.className = 'severity-btn' + (b.dataset.sev === state.damageSeverity ? ` sel-${state.damageSeverity}` : '');
   });
+  // Deselect "No Damage" when a severity is picked
+  if (state.damageSeverity) {
+    state.noDamage = false;
+    document.getElementById('no-damage-btn').classList.remove('selected');
+    document.getElementById('no-damage-check').textContent = '';
+    document.getElementById('damage-inputs').style.display = '';
+  }
 });
 
 // ── Smells ──
@@ -1020,16 +1027,23 @@ document.getElementById('btn-submit').addEventListener('click', async () => {
     }
   }
 
+  // Damage section is required — must pick "No Damage" or a severity level
+  if (!state.noDamage && !state.damageSeverity) {
+    showToast('Property Condition is required: select No Damage or a severity level.');
+    document.getElementById('no-damage-btn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  // If severity selected, written description AND at least one photo are both required
   if (!state.noDamage && state.damageSeverity) {
     const damageText = document.getElementById('damage-text').value.trim();
     if (!damageText) {
-      showToast('Please describe the damage in the text box.');
+      showToast('Damage description is required — describe the issue, location, and condition.');
       document.getElementById('damage-text').scrollIntoView({ behavior: 'smooth', block: 'center' });
       document.getElementById('damage-text').focus();
       return;
     }
     if (state.photos.length === 0) {
-      showToast('Please attach at least one photo to document the damage.');
+      showToast('At least one damage photo is required when damage is reported.');
       document.getElementById('photo-add-btn').scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
