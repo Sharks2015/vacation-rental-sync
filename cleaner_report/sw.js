@@ -1,4 +1,4 @@
-const CACHE = 'psc-v25';
+const CACHE = 'psc-v26';
 const PRECACHE = ['/', '/index.html', '/logo.jpg', '/icon-192.png', '/icon-512.png', '/manifest.json'];
 
 self.addEventListener('install', e => {

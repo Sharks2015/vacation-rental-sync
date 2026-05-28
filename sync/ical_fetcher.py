@@ -41,6 +41,9 @@ def _extract_guest_name(summary: str) -> str:
 
 def _parse_url(url: str, prop: Property) -> List[Booking]:
     """Fetch and parse a single iCal URL into Booking objects."""
+    if not url or not url.strip():
+        logger.warning("No iCal URL configured for '%s' — skipping", prop.name)
+        return []
     try:
         resp = requests.get(url, timeout=15)
         resp.raise_for_status()
