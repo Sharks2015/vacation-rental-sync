@@ -204,6 +204,19 @@ def debug_pm():
     return jsonify({"property": prop, "manager": manager})
 
 
+@app.route("/debug-properties")
+def debug_properties():
+    try:
+        records = table("Properties").all(fields=["Name", "CC Phone", "Property Managers"])
+        return jsonify([{
+            "name": r["fields"].get("Name", ""),
+            "cc_phone": r["fields"].get("CC Phone", ""),
+            "has_manager": bool(r["fields"].get("Property Managers")),
+        } for r in records])
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+
 @app.route("/test-airtable")
 def test_airtable():
     try:
