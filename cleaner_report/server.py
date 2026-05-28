@@ -59,6 +59,14 @@ cloudinary.config(
     api_secret=os.getenv("CLOUDINARY_API_SECRET", ""),
 )
 
+_cloud_ok = all([
+    os.getenv("CLOUDINARY_CLOUD_NAME"),
+    os.getenv("CLOUDINARY_API_KEY"),
+    os.getenv("CLOUDINARY_API_SECRET"),
+])
+if not _cloud_ok:
+    print("[STARTUP] WARNING: Cloudinary not configured — photo uploads will be skipped")
+
 SUPPLY_LABELS = {
     "toilet_paper": "Toilet Paper",
     "paper_towels": "Paper Towels",
@@ -174,7 +182,7 @@ def submit_report():
         except Exception as e:
             print(f"Save report error: {e}")
 
-    threading.Thread(target=_process, daemon=True).start()
+    threading.Thread(target=_process, daemon=False).start()
     return jsonify({"success": True})
 
 
@@ -253,7 +261,10 @@ def get_history():
 
 
 def _upload_photos(photos, property_name):
-    if not photos or not os.getenv("CLOUDINARY_CLOUD_NAME"):
+    if not photos:
+        return []
+    if not _cloud_ok:
+        print("[Cloudinary] Skipping upload — credentials not configured")
         return []
     urls = []
     now_et = datetime.now(_ET)
