@@ -187,6 +187,18 @@ def submit_report():
     return jsonify({"success": True})
 
 
+@app.route("/check-env")
+def check_env():
+    return jsonify({
+        "AIRTABLE_API_KEY": bool(os.getenv("AIRTABLE_API_KEY")),
+        "AIRTABLE_BASE_ID": bool(os.getenv("AIRTABLE_BASE_ID")),
+        "CLOUDINARY_CLOUD_NAME": bool(os.getenv("CLOUDINARY_CLOUD_NAME")),
+        "CLOUDINARY_API_KEY": bool(os.getenv("CLOUDINARY_API_KEY")),
+        "CLOUDINARY_API_SECRET": bool(os.getenv("CLOUDINARY_API_SECRET")),
+        "GHL_WEBHOOK_URL": bool(os.getenv("GHL_WEBHOOK_URL")),
+    })
+
+
 @app.route("/test-cloudinary")
 def test_cloudinary():
     import base64
