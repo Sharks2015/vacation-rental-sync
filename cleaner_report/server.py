@@ -494,8 +494,8 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
         "Smell Report:",
         f"• {smell_text}" if smell_notes else "• No Smells Reported",
     ]
-    if photo_links:
-        lines += ["", "Photos:", photo_links]
+    if photo_urls:
+        lines += ["", f"Photos: {len(photo_urls)} uploaded"]
     lines += ["", "— Paradise Shine Cleaning"]
 
     report_body = "\n".join(lines)
