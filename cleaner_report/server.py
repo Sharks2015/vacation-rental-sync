@@ -409,6 +409,16 @@ def _upload_photos(photos, property_name):
 STATUS_LABELS = {"running_low": "Running Low", "completely_out": "Completely Out"}
 
 
+def _shorten_url(url):
+    try:
+        r = requests.get(f"https://tinyurl.com/api-create.php?url={requests.utils.quote(url, safe='')}", timeout=5)
+        if r.status_code == 200 and r.text.startswith("http"):
+            return r.text.strip()
+    except Exception:
+        pass
+    return url
+
+
 def _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_notes, smell_notes, photo_urls):
     flagged = "" if fully_stocked else ", ".join(
         f"{SUPPLY_LABELS.get(k, k)}: {STATUS_LABELS.get(v, v)}"
@@ -476,7 +486,8 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
 
     photo_links = ""
     if photo_urls:
-        photo_lines = [f"Photo {i + 1}: {url}" for i, url in enumerate(photo_urls)]
+        short_urls = [_shorten_url(url) for url in photo_urls]
+        photo_lines = [f"Photo {i + 1}: {u}" for i, u in enumerate(short_urls)]
         photo_links = "\n".join(photo_lines)
 
     damage_text = _strip(damage_notes) if damage_notes else "No Damages Reported"
@@ -494,8 +505,8 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
         "Smell Report:",
         f"• {smell_text}" if smell_notes else "• No Smells Reported",
     ]
-    if photo_urls:
-        lines += ["", f"Photos: {len(photo_urls)} uploaded"]
+    if photo_links:
+        lines += ["", "Photos:", photo_links]
     lines += ["", "— Paradise Shine Cleaning"]
 
     report_body = "\n".join(lines)
