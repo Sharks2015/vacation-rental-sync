@@ -408,6 +408,16 @@ def _upload_photos(photos, property_name):
 
 STATUS_LABELS = {"running_low": "Running Low", "completely_out": "Completely Out"}
 
+_CARRIER_BLOCKED = re.compile(
+    r'\b(marijuana|marihuana|cannabis|weed|pot|ganja|reefer|blunt|joint|'
+    r'cocaine|coke|crack|meth|methamphetamine|heroin|fentanyl|molly|ecstasy|'
+    r'xanax|opioid|drug|drugs)\b',
+    flags=re.IGNORECASE,
+)
+
+def _sanitize_sms(text):
+    return _CARRIER_BLOCKED.sub("substance", text) if text else text
+
 
 def _shorten_url(url):
     try:
@@ -496,7 +506,7 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
         item_lines = "\n".join(f"• {label}: {status}" for label, status in flagged) if flagged else "• No issues"
         inventory_sms = f"Stock: Low:\n{item_lines}"
 
-    smell_sms = f"Smell: {(_strip(smell_notes) or '')[:80]}" if smell_notes else "Smell: None"
+    smell_sms = f"Smell: {_sanitize_sms((_strip(smell_notes) or '')[:80])}" if smell_notes else "Smell: None"
     summary_body = f"{short_date}\n{inventory_sms}\n{smell_sms}"
 
     # SMS 2: damage notes + photos — only sent if damage or photos exist
@@ -504,7 +514,7 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
     if damage_notes or short_urls:
         parts = []
         if damage_notes:
-            parts.append(f"Damage:\n{(_strip(damage_notes) or '')[:120]}")
+            parts.append(f"Damage:\n{_sanitize_sms((_strip(damage_notes) or '')[:120])}")
         if short_urls:
             parts.append("Photos:\n" + "\n".join(u.replace("https://", "") for u in short_urls))
         damage_body = "\n\n".join(parts)
