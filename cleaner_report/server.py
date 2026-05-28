@@ -420,15 +420,15 @@ def _get_property_manager(property_name):
         if not records:
             return {}
         fields = records[0]["fields"]
+        cc_phone = fields.get("CC Phone", "")
         manager_ids = fields.get("Property Managers", [])
         print(f"[PM] Manager IDs: {manager_ids}")
         if not manager_ids:
-            return {}
+            return {"cc_phone": cc_phone}
         mgr = table("Property Managers").get(manager_ids[0])
         f = mgr["fields"]
         email = (f.get("Email", "") or "").strip()
         print(f"[PM] Found: {f.get('Name', '')} <{email}>")
-        cc_phone = fields.get("CC Phone", "")
         return {
             "name": f.get("Name", ""),
             "email": email,
