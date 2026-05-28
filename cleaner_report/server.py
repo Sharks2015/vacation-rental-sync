@@ -59,6 +59,8 @@ cloudinary.config(
     api_secret=os.getenv("CLOUDINARY_API_SECRET", ""),
 )
 
+_last_save_error = {"msg": None}
+
 _cloud_ok = all([
     os.getenv("CLOUDINARY_CLOUD_NAME"),
     os.getenv("CLOUDINARY_API_KEY"),
@@ -171,6 +173,7 @@ def submit_report():
         _save_report(cleaner_name, property_name, fully_stocked,
                      supplies, damage_notes, smell_notes, photo_urls)
     except Exception as e:
+        _last_save_error["msg"] = str(e)
         print(f"[Report] Save error: {e}")
 
     # Send GHL webhook in background so response isn't delayed
@@ -185,6 +188,11 @@ def submit_report():
 
     threading.Thread(target=_notify, daemon=True).start()
     return jsonify({"success": True})
+
+
+@app.route("/last-error")
+def last_error():
+    return jsonify(_last_save_error)
 
 
 @app.route("/test-airtable")
