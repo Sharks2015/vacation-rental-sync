@@ -485,8 +485,10 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
         supply_summary = ", ".join(f"{label}: {status}" for label, status in flagged) or "No issues"
         stock_line = f"Low: {supply_summary[:80]}"
 
-    damage_text = (_strip(damage_notes) or "")[:80] if damage_notes else "None"
-    smell_text = (_strip(smell_notes) or "")[:50] if smell_notes else "None"
+    # Use Yes/None for damage and smell — never include actual text in SMS
+    # (carriers block messages containing drug/substance words like "marijuana")
+    damage_flag = "Yes - see Airtable" if damage_notes else "None"
+    smell_flag = "Yes - see Airtable" if smell_notes else "None"
 
     # Build short URLs once
     short_urls = [_shorten_url(url) for url in photo_urls] if photo_urls else []
@@ -495,7 +497,7 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
     # SMS 1: report summary only (no photos) — always fits under 320
     summary_body = "\n".join([
         f"{short_date} | Stock: {stock_line}",
-        f"Damage: {damage_text} | Smell: {smell_text}",
+        f"Damage: {damage_flag} | Smell: {smell_flag}",
     ])
 
     # SMS 2: photo links only — sent as a separate webhook if photos exist
