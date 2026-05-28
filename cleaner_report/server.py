@@ -473,43 +473,35 @@ def _get_property_manager(property_name):
 
 
 def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage_notes, smell_notes, manager, photo_urls):
-    submitted_at = datetime.now(_ET).strftime("%B %d, %Y at %I:%M %p ET")
+    now_et = datetime.now(_ET)
+    submitted_at = now_et.strftime("%B %d, %Y at %I:%M %p ET")
+    short_date = now_et.strftime("%m/%d %I:%M%p")
 
-    # Inventory section
     if fully_stocked:
         supply_summary = "Fully stocked"
-        inventory_lines = "• No Supply Issues"
+        stock_line = "Full"
     else:
         flagged = [(SUPPLY_LABELS.get(k, k), STATUS_LABELS.get(v, v)) for k, v in supplies.items() if v]
         supply_summary = ", ".join(f"{label}: {status}" for label, status in flagged) or "No issues"
-        inventory_lines = "\n".join(f"• {label}: {status}" for label, status in flagged) if flagged else "• No Supply Issues"
+        stock_line = f"Low: {supply_summary[:60]}"
 
-    photo_links = ""
-    if photo_urls:
-        short_urls = [_shorten_url(url) for url in photo_urls]
-        photo_lines = [f"Photo {i + 1}: {u}" for i, u in enumerate(short_urls)]
-        photo_links = "\n".join(photo_lines)
+    damage_text = (_strip(damage_notes) or "")[:60] if damage_notes else "None"
+    smell_text = (_strip(smell_notes) or "")[:40] if smell_notes else "None"
 
-    damage_text = _strip(damage_notes) if damage_notes else "No Damages Reported"
-    smell_text = _strip(smell_notes) if smell_notes else "No Smells Reported"
+    # Build short URLs once — used in both compact SMS body and photo_links field
+    short_urls = [_shorten_url(url) for url in photo_urls] if photo_urls else []
+    photo_links = "\n".join(f"Photo {i+1}: {u}" for i, u in enumerate(short_urls))
 
-    lines = [
-        f"Date: {submitted_at}",
-        "",
-        "Inventory:",
-        inventory_lines,
-        "",
-        "Damage Report:",
-        f"• {damage_text}" if damage_notes else "• No Damages Reported",
-        "",
-        "Smell Report:",
-        f"• {smell_text}" if smell_notes else "• No Smells Reported",
+    # Compact body — must stay under ~200 chars so total SMS stays under 320
+    sms_lines = [
+        f"{short_date} | Stock: {stock_line}",
+        f"Damage: {damage_text} | Smell: {smell_text}",
     ]
-    if photo_links:
-        lines += ["", "Photos:", photo_links]
-    lines += ["", "— Paradise Shine Cleaning"]
+    if short_urls:
+        # Drop "https://" to save 8 chars per URL
+        sms_lines.append("Photos: " + " ".join(u.replace("https://", "") for u in short_urls))
 
-    report_body = "\n".join(lines)
+    report_body = "\n".join(sms_lines)
 
     base = {
         "cleaner_name": cleaner_name,
