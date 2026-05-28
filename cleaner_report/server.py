@@ -195,6 +195,15 @@ def last_error():
     return jsonify(_last_save_error)
 
 
+@app.route("/debug-pm")
+def debug_pm():
+    prop = request.args.get("property", "")
+    if not prop:
+        return jsonify({"error": "Pass ?property=<name>"}), 400
+    manager = _get_property_manager(prop)
+    return jsonify({"property": prop, "manager": manager})
+
+
 @app.route("/test-airtable")
 def test_airtable():
     try:
@@ -492,21 +501,22 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
     }
 
     # Primary manager — GHL sends SMS + email
-    requests.post(GHL_WEBHOOK_URL, json={**base,
+    r1 = requests.post(GHL_WEBHOOK_URL, json={**base,
         "manager_name": manager.get("name", ""),
         "manager_email": manager.get("email", ""),
         "manager_phone": manager.get("phone", ""),
     }, timeout=10)
-    print(f"[GHL] Webhook sent — manager: {manager.get('name', '')} | photos: {len(photo_urls)}")
+    print(f"[GHL] Primary webhook → status={r1.status_code} body={r1.text[:200]} | manager={manager.get('name','')} phone={manager.get('phone','')} | photos={len(photo_urls)}")
 
-    # CC phone (e.g. Jeanine) — second webhook for SMS only
+    # CC phone — second webhook for SMS only
     cc_phone = manager.get("cc_phone", "")
     if cc_phone:
-        requests.post(GHL_WEBHOOK_URL, json={**base,
+        r2 = requests.post(GHL_WEBHOOK_URL, json={**base,
             "manager_name": "CC",
             "manager_email": "",
             "manager_phone": cc_phone,
         }, timeout=10)
+        print(f"[GHL] CC webhook → status={r2.status_code} body={r2.text[:200]} | cc_phone={cc_phone}")
 
 
 if __name__ == "__main__":
