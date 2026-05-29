@@ -163,6 +163,7 @@ def submit_report():
     supplies = data.get("supplies", {})
     damage_notes = data.get("damage_notes", "")
     smell_notes = data.get("smell_notes", "")
+    stain_notes = data.get("stain_notes", "")
     photos = data.get("photos", [])
 
     # Upload photos first (Cloudinary is now working)
@@ -171,7 +172,7 @@ def submit_report():
     # Save report to Airtable
     try:
         _save_report(cleaner_name, property_name, fully_stocked,
-                     supplies, damage_notes, smell_notes, photo_urls)
+                     supplies, damage_notes, smell_notes, stain_notes, photo_urls)
     except Exception as e:
         _last_save_error["msg"] = str(e)
         print(f"[Report] Save error: {e}")
@@ -182,7 +183,7 @@ def submit_report():
         if GHL_WEBHOOK_URL:
             try:
                 _forward_to_ghl(cleaner_name, property_name, fully_stocked,
-                                supplies, damage_notes, smell_notes, manager, photo_urls)
+                                supplies, damage_notes, smell_notes, stain_notes, manager, photo_urls)
             except Exception as e:
                 print(f"GHL webhook error: {e}")
 
@@ -429,7 +430,7 @@ def _shorten_url(url):
     return url
 
 
-def _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_notes, smell_notes, photo_urls):
+def _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_notes, smell_notes, stain_notes, photo_urls):
     flagged = "" if fully_stocked else ", ".join(
         f"{SUPPLY_LABELS.get(k, k)}: {STATUS_LABELS.get(v, v)}"
         for k, v in supplies.items() if v
@@ -437,6 +438,7 @@ def _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_no
     combined_notes = "\n\n".join(filter(None, [
         f"Damage: {damage_notes}" if damage_notes else "",
         f"Smell: {smell_notes}" if smell_notes else "",
+        f"Stained Items:\n{stain_notes}" if stain_notes else "",
     ]))
     record = {
         "Property": property_name,
@@ -482,7 +484,7 @@ def _get_property_manager(property_name):
         return {}
 
 
-def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage_notes, smell_notes, manager, photo_urls):
+def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage_notes, smell_notes, stain_notes, manager, photo_urls):
     now_et = datetime.now(_ET)
     submitted_at = now_et.strftime("%B %d, %Y at %I:%M %p ET")
     short_date = now_et.strftime("%m/%d %I:%M%p")
@@ -507,7 +509,8 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
         inventory_sms = f"Stock: Low:\n{item_lines}"
 
     smell_sms = f"Smell: {_sanitize_sms((_strip(smell_notes) or '')[:80])}" if smell_notes else "Smell: None"
-    summary_body = f"{short_date}\n{inventory_sms}\n{smell_sms}"
+    stain_sms = f"Stains: {stain_notes[:100]}" if stain_notes else "Stains: None"
+    summary_body = f"{short_date}\n{inventory_sms}\n{smell_sms}\n{stain_sms}"
 
     # SMS 2: damage notes + photos — only sent if damage or photos exist
     damage_body = None
