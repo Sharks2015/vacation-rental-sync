@@ -963,7 +963,7 @@ function openReport(propName) {
 
 function findSupplyConfig(propName) {
   if (PROPERTY_SUPPLIES[propName]) return PROPERTY_SUPPLIES[propName];
-  const norm = s => s.toLowerCase().trim().replace(/\s+/g, ' ');
+  const norm = s => s.toLowerCase().trim().replace(/,/g, '').replace(/\s+/g, ' ');
   const target = norm(propName);
   const key = Object.keys(PROPERTY_SUPPLIES).find(k => norm(k) === target);
   return key ? PROPERTY_SUPPLIES[key] : null;
