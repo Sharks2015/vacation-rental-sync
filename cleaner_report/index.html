@@ -312,6 +312,13 @@
     }
     .qty-val.has-val { color: var(--red); }
     .stain-divider { height: 1px; background: var(--border); margin: 6px 14px 0; }
+    .stain-size-header {
+      padding: 8px 14px 2px; font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.07em; color: var(--navy);
+      background: var(--bg-2); border-bottom: 1px solid var(--border-faint);
+    }
+    .stain-row.subrow { padding-left: 24px; }
+    .stain-row.subrow .stain-label { font-size: 12.5px; color: var(--text-2); }
     .card-note { font-size: 10px; font-weight: 400; color: var(--text-3); margin-left: auto; text-transform: none; letter-spacing: 0; }
 
     /* Photo */
@@ -603,38 +610,30 @@
           No Stains
         </button>
         <div id="stain-sheets-inputs">
-          <div class="stain-row">
-            <span class="stain-label">King</span>
-            <div class="stain-stepper">
-              <button class="qty-btn" data-section="sheets" data-item="king" data-action="dec">−</button>
-              <span class="qty-val" id="qty-sheets-king">0</span>
-              <button class="qty-btn" data-section="sheets" data-item="king" data-action="inc">+</button>
-            </div>
-          </div>
-          <div class="stain-row">
-            <span class="stain-label">Queen</span>
-            <div class="stain-stepper">
-              <button class="qty-btn" data-section="sheets" data-item="queen" data-action="dec">−</button>
-              <span class="qty-val" id="qty-sheets-queen">0</span>
-              <button class="qty-btn" data-section="sheets" data-item="queen" data-action="inc">+</button>
-            </div>
-          </div>
-          <div class="stain-row">
-            <span class="stain-label">Twin</span>
-            <div class="stain-stepper">
-              <button class="qty-btn" data-section="sheets" data-item="twin" data-action="dec">−</button>
-              <span class="qty-val" id="qty-sheets-twin">0</span>
-              <button class="qty-btn" data-section="sheets" data-item="twin" data-action="inc">+</button>
-            </div>
-          </div>
-          <div class="stain-row">
-            <span class="stain-label">Full</span>
-            <div class="stain-stepper">
-              <button class="qty-btn" data-section="sheets" data-item="full" data-action="dec">−</button>
-              <span class="qty-val" id="qty-sheets-full">0</span>
-              <button class="qty-btn" data-section="sheets" data-item="full" data-action="inc">+</button>
-            </div>
-          </div>
+          <!-- King -->
+          <div class="stain-size-header">King</div>
+          <div class="stain-row subrow"><span class="stain-label">Fitted Sheet</span><div class="stain-stepper"><button class="qty-btn" data-section="sheets" data-item="king_fitted" data-action="dec">−</button><span class="qty-val" id="qty-sheets-king_fitted">0</span><button class="qty-btn" data-section="sheets" data-item="king_fitted" data-action="inc">+</button></div></div>
+          <div class="stain-row subrow"><span class="stain-label">Flat Sheet</span><div class="stain-stepper"><button class="qty-btn" data-section="sheets" data-item="king_flat" data-action="dec">−</button><span class="qty-val" id="qty-sheets-king_flat">0</span><button class="qty-btn" data-section="sheets" data-item="king_flat" data-action="inc">+</button></div></div>
+          <div class="stain-row subrow"><span class="stain-label">Duvet</span><div class="stain-stepper"><button class="qty-btn" data-section="sheets" data-item="king_duvet" data-action="dec">−</button><span class="qty-val" id="qty-sheets-king_duvet">0</span><button class="qty-btn" data-section="sheets" data-item="king_duvet" data-action="inc">+</button></div></div>
+          <div class="stain-row subrow"><span class="stain-label">Pillow Case</span><div class="stain-stepper"><button class="qty-btn" data-section="sheets" data-item="king_pillow" data-action="dec">−</button><span class="qty-val" id="qty-sheets-king_pillow">0</span><button class="qty-btn" data-section="sheets" data-item="king_pillow" data-action="inc">+</button></div></div>
+          <!-- Queen -->
+          <div class="stain-size-header">Queen</div>
+          <div class="stain-row subrow"><span class="stain-label">Fitted Sheet</span><div class="stain-stepper"><button class="qty-btn" data-section="sheets" data-item="queen_fitted" data-action="dec">−</button><span class="qty-val" id="qty-sheets-queen_fitted">0</span><button class="qty-btn" data-section="sheets" data-item="queen_fitted" data-action="inc">+</button></div></div>
+          <div class="stain-row subrow"><span class="stain-label">Flat Sheet</span><div class="stain-stepper"><button class="qty-btn" data-section="sheets" data-item="queen_flat" data-action="dec">−</button><span class="qty-val" id="qty-sheets-queen_flat">0</span><button class="qty-btn" data-section="sheets" data-item="queen_flat" data-action="inc">+</button></div></div>
+          <div class="stain-row subrow"><span class="stain-label">Duvet</span><div class="stain-stepper"><button class="qty-btn" data-section="sheets" data-item="queen_duvet" data-action="dec">−</button><span class="qty-val" id="qty-sheets-queen_duvet">0</span><button class="qty-btn" data-section="sheets" data-item="queen_duvet" data-action="inc">+</button></div></div>
+          <div class="stain-row subrow"><span class="stain-label">Pillow Case</span><div class="stain-stepper"><button class="qty-btn" data-section="sheets" data-item="queen_pillow" data-action="dec">−</button><span class="qty-val" id="qty-sheets-queen_pillow">0</span><button class="qty-btn" data-section="sheets" data-item="queen_pillow" data-action="inc">+</button></div></div>
+          <!-- Twin -->
+          <div class="stain-size-header">Twin</div>
+          <div class="stain-row subrow"><span class="stain-label">Fitted Sheet</span><div class="stain-stepper"><button class="qty-btn" data-section="sheets" data-item="twin_fitted" data-action="dec">−</button><span class="qty-val" id="qty-sheets-twin_fitted">0</span><button class="qty-btn" data-section="sheets" data-item="twin_fitted" data-action="inc">+</button></div></div>
+          <div class="stain-row subrow"><span class="stain-label">Flat Sheet</span><div class="stain-stepper"><button class="qty-btn" data-section="sheets" data-item="twin_flat" data-action="dec">−</button><span class="qty-val" id="qty-sheets-twin_flat">0</span><button class="qty-btn" data-section="sheets" data-item="twin_flat" data-action="inc">+</button></div></div>
+          <div class="stain-row subrow"><span class="stain-label">Duvet</span><div class="stain-stepper"><button class="qty-btn" data-section="sheets" data-item="twin_duvet" data-action="dec">−</button><span class="qty-val" id="qty-sheets-twin_duvet">0</span><button class="qty-btn" data-section="sheets" data-item="twin_duvet" data-action="inc">+</button></div></div>
+          <div class="stain-row subrow"><span class="stain-label">Pillow Case</span><div class="stain-stepper"><button class="qty-btn" data-section="sheets" data-item="twin_pillow" data-action="dec">−</button><span class="qty-val" id="qty-sheets-twin_pillow">0</span><button class="qty-btn" data-section="sheets" data-item="twin_pillow" data-action="inc">+</button></div></div>
+          <!-- Full -->
+          <div class="stain-size-header">Full</div>
+          <div class="stain-row subrow"><span class="stain-label">Fitted Sheet</span><div class="stain-stepper"><button class="qty-btn" data-section="sheets" data-item="full_fitted" data-action="dec">−</button><span class="qty-val" id="qty-sheets-full_fitted">0</span><button class="qty-btn" data-section="sheets" data-item="full_fitted" data-action="inc">+</button></div></div>
+          <div class="stain-row subrow"><span class="stain-label">Flat Sheet</span><div class="stain-stepper"><button class="qty-btn" data-section="sheets" data-item="full_flat" data-action="dec">−</button><span class="qty-val" id="qty-sheets-full_flat">0</span><button class="qty-btn" data-section="sheets" data-item="full_flat" data-action="inc">+</button></div></div>
+          <div class="stain-row subrow"><span class="stain-label">Duvet</span><div class="stain-stepper"><button class="qty-btn" data-section="sheets" data-item="full_duvet" data-action="dec">−</button><span class="qty-val" id="qty-sheets-full_duvet">0</span><button class="qty-btn" data-section="sheets" data-item="full_duvet" data-action="inc">+</button></div></div>
+          <div class="stain-row subrow"><span class="stain-label">Pillow Case</span><div class="stain-stepper"><button class="qty-btn" data-section="sheets" data-item="full_pillow" data-action="dec">−</button><span class="qty-val" id="qty-sheets-full_pillow">0</span><button class="qty-btn" data-section="sheets" data-item="full_pillow" data-action="inc">+</button></div></div>
         </div>
 
         <div class="stain-divider"></div>
@@ -822,7 +821,10 @@ const SMELL_LABELS = {
   pet:'Pet Odor', sewage:'Sewage', other:'Other',
 };
 
-const SHEET_ITEMS = ['king','queen','twin','full'];
+const SHEET_SIZES = ['king','queen','twin','full'];
+const SHEET_TYPES = ['fitted','flat','duvet','pillow'];
+const SHEET_TYPE_LABELS = { fitted:'Fitted Sheet', flat:'Flat Sheet', duvet:'Duvet', pillow:'Pillow Case' };
+const SHEET_ITEMS = SHEET_SIZES.flatMap(s => SHEET_TYPES.map(t => `${s}_${t}`));
 const TOWEL_ITEMS = ['face','hand','bath','beach'];
 const TOWEL_LABELS = { face:'Face Towel', hand:'Hand Towel', bath:'Bath Towel', beach:'Beach Towel' };
 
@@ -830,7 +832,7 @@ const state = {
   pin: '', cleanerName: '', properties: [], selectedProperty: null,
   supplies: {}, fullyStocked: false, photos: [],
   damageSeverity: null, noDamage: false, smells: [], noSmell: false,
-  stainSheets: { king:0, queen:0, twin:0, full:0 },
+  stainSheets: Object.fromEntries(['king','queen','twin','full'].flatMap(s => ['fitted','flat','duvet','pillow'].map(t => [`${s}_${t}`, 0]))),
   stainTowels: { face:0, hand:0, bath:0, beach:0 },
   noStainSheets: false, noStainTowels: false,
   reportId: null,
@@ -953,10 +955,10 @@ function openReport(propName) {
   document.getElementById('stain-towels-inputs').style.display = '';
   document.querySelectorAll('.severity-btn').forEach(b => b.className = 'severity-btn');
   document.querySelectorAll('.smell-btn').forEach(b => b.classList.remove('selected'));
-  state.stainSheets = { king:0, queen:0, twin:0, full:0 };
+  state.stainSheets = Object.fromEntries(SHEET_ITEMS.map(k => [k, 0]));
   state.stainTowels = { face:0, hand:0, bath:0, beach:0 };
   state.noStainSheets = false; state.noStainTowels = false;
-  SHEET_ITEMS.forEach(k => { const el = document.getElementById(`qty-sheets-${k}`); el.textContent='0'; el.classList.remove('has-val'); });
+  SHEET_ITEMS.forEach(k => { const el = document.getElementById(`qty-sheets-${k}`); if (el) { el.textContent='0'; el.classList.remove('has-val'); } });
   TOWEL_ITEMS.forEach(k => { const el = document.getElementById(`qty-towels-${k}`); el.textContent='0'; el.classList.remove('has-val'); });
 
   const fsBtn = document.getElementById('fully-stocked-btn');
@@ -1209,9 +1211,11 @@ document.getElementById('stain-towels-inputs').addEventListener('click', e => {
 function buildStainNotes() {
   const parts = [];
   if (!state.noStainSheets) {
-    const items = SHEET_ITEMS.filter(k => state.stainSheets[k] > 0)
-      .map(k => `${k.charAt(0).toUpperCase()+k.slice(1)}: ${state.stainSheets[k]}`);
-    if (items.length) parts.push(`Sheets — ${items.join(', ')}`);
+    SHEET_SIZES.forEach(size => {
+      const sub = SHEET_TYPES.filter(t => state.stainSheets[`${size}_${t}`] > 0)
+        .map(t => `${SHEET_TYPE_LABELS[t]}: ${state.stainSheets[`${size}_${t}`]}`);
+      if (sub.length) parts.push(`${size.charAt(0).toUpperCase()+size.slice(1)} — ${sub.join(', ')}`);
+    });
   }
   if (!state.noStainTowels) {
     const items = TOWEL_ITEMS.filter(k => state.stainTowels[k] > 0)
