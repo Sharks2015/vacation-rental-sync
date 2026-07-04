@@ -729,7 +729,7 @@ const SUPPLY_LABELS = {
   conditioner:'Conditioner', body_wash:'Body Wash', trash_kitchen:'Kitchen Trash Bags',
   trash_bathroom:'Bathroom Trash Bags', detergent:'Laundry Detergent', bleach:'Bleach',
   shampoo_refill:'Shampoo Refill', conditioner_refill:'Conditioner Refill',
-  body_wash_refill:'Body Wash Refill', snacks:'Snacks', waters:'Waters',
+  body_wash_refill:'Body Wash Refill', snacks:'Snacks', waters:'Waters', sparkling_water:'Sparkling Water',
   toothbrushes:'Toothbrushes', razors:'Razors', cotton_swabs:'Cotton Swabs',
   hand_wipes:'Hand Wipes', mouthwash:'Mouthwash', toilet_bands:'Toilet Bands',
   stain_remover:'Stain Remover', shampoo_bottles:'Shampoo Bottles',
@@ -752,6 +752,10 @@ const LAPIERRE = ['toilet_paper','paper_towels','sponge','dish_soap','hand_soap'
 const LAPIERRE_NO_SNACKS = ['toilet_paper','paper_towels','sponge','dish_soap','hand_soap',
   'laundry_pods','detergent','dish_pods','bleach','shampoo_refill','conditioner_refill',
   'body_wash_refill','trash_kitchen','trash_bathroom','coffee_pods','sugar_packets','tea'];
+const LAPIERRE_SPARKLING = ['toilet_paper','paper_towels','sponge','dish_soap','hand_soap',
+  'laundry_pods','detergent','dish_pods','bleach','shampoo_refill','conditioner_refill',
+  'body_wash_refill','snacks','sparkling_water','trash_kitchen','trash_bathroom',
+  'coffee_pods','sugar_packets','tea'];
 
 const STANDARD_REFILL = ['toilet_paper','paper_towels','sponge','dish_soap','hand_soap',
   'laundry_pods','detergent','dish_pods','bleach','shampoo_refill','conditioner_refill',
@@ -793,6 +797,7 @@ const PROPERTY_SUPPLIES = {
   '938 Flamango Lake Dr West Palm Beach':  { grouped: false, items: STANDARD_REFILL },
   '1116 SE 13th Ct Deerfield Beach':       { grouped: false, items: LAPIERRE_NO_SNACKS },
   '1301 North N Street Lake Worth Beach FL': { grouped: false, items: LAPIERRE_NO_SNACKS },
+  '1114 N L Street Lake Worth':              { grouped: false, items: LAPIERRE_SPARKLING },
   '2624 SW 6th St Boynton Beach':          { grouped: false, items: STANDARD_REFILL },
   '125 NW 3rd Ave Delray Beach':           { grouped: false, items: STANDARD_REFILL },
   '1241 SW 27th Ave Boynton Beach':        { grouped: true, groups: TDANNA_GROUPS },
