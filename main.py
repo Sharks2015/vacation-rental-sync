@@ -240,6 +240,29 @@ def sync_property(prop):
     logger.info("Finished syncing '%s'", prop.name)
 
 
+def flag_orphaned_tasks():
+    """
+    Catch any Cleaning Task with no Property linked, however it got created.
+    Without a Property, no cleaner is ever notified and the task shows no
+    address in any Airtable view — so these need to be impossible to miss.
+    """
+    orphaned = airtable.get_tasks_missing_property()
+    if not orphaned:
+        return
+    logger.warning("Found %d cleaning task(s) with no Property linked", len(orphaned))
+    for t in orphaned:
+        f = t["fields"]
+        task_name = f.get("Task Name", "")
+        if task_name and not task_name.startswith(airtable.ORPHAN_FLAG_PREFIX):
+            continue  # already manually named/handled — don't clobber it
+        cleaning_date = f.get("Cleaning Date", "unknown date")
+        airtable.flag_task_missing_property(t["id"], cleaning_date)
+        logger.warning(
+            "Flagged orphaned task %s (cleaning date %s, booking UID %s) — no Property linked",
+            t["id"], cleaning_date, f.get("Booking UID", ""),
+        )
+
+
 def main():
     logger.info("Starting vacation rental sync")
     lodgify_client.reset_cache()  # Fresh fetch each sync run
@@ -256,6 +279,11 @@ def main():
         except Exception as e:
             logger.error("Unhandled error syncing '%s': %s", prop.name, e, exc_info=True)
             errors.append(prop.name)
+
+    try:
+        flag_orphaned_tasks()
+    except Exception as e:
+        logger.error("Unhandled error flagging orphaned tasks: %s", e, exc_info=True)
 
     if errors:
         logger.error("Sync completed with errors in: %s", ", ".join(errors))

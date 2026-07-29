@@ -223,3 +223,32 @@ def update_task(airtable_id: str, task: CleaningTask) -> CleaningTask:
     time.sleep(_WRITE_DELAY)
     table.update(airtable_id, _task_to_fields(task))
     return task
+
+
+ORPHAN_FLAG_PREFIX = "⚠️ NEEDS PROPERTY"
+
+
+def get_tasks_missing_property() -> List[dict]:
+    """
+    Return raw Cleaning Task records with no linked Property, excluding
+    already-Cancelled tasks. Covers tasks created by any process — not just
+    this script — since a missing Property link means no cleaner ever gets
+    notified and the task won't show an address in any view.
+    """
+    api = _get_api()
+    table = api.table(settings.AIRTABLE_BASE_ID, settings.AIRTABLE_TASKS_TABLE)
+    records = table.all()
+    return [
+        r for r in records
+        if not r["fields"].get("Property") and r["fields"].get("Status") != "Cancelled"
+    ]
+
+
+def flag_task_missing_property(record_id: str, cleaning_date: str) -> None:
+    """Rename an orphaned task's Task Name so it's visible instead of blank in every view."""
+    api = _get_api()
+    table = api.table(settings.AIRTABLE_BASE_ID, settings.AIRTABLE_TASKS_TABLE)
+    time.sleep(_WRITE_DELAY)
+    table.update(record_id, {
+        "Task Name": f"{ORPHAN_FLAG_PREFIX} — cleaning due {cleaning_date}",
+    })
