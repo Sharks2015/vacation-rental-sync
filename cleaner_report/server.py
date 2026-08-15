@@ -98,6 +98,7 @@ SUPPLY_LABELS = {
     "mouthwash": "Mouthwash",
     "toilet_bands": "Toilet Bands",
     "stain_remover": "Stain Remover",
+    "oxiclean": "OxiClean",
     "shampoo_bottles": "Shampoo Bottles",
     "conditioner_bottles": "Conditioner Bottles",
     "body_wash_bottles": "Body Wash Bottles",
