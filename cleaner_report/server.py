@@ -99,6 +99,8 @@ SUPPLY_LABELS = {
     "toilet_bands": "Toilet Bands",
     "stain_remover": "Stain Remover",
     "oxiclean": "OxiClean",
+    "aluminum_foil": "Aluminum Foil",
+    "propane_tank": "Propane Tank",
     "shampoo_bottles": "Shampoo Bottles",
     "conditioner_bottles": "Conditioner Bottles",
     "body_wash_bottles": "Body Wash Bottles",
@@ -467,10 +469,11 @@ def _get_property_manager(property_name):
             return {}
         fields = records[0]["fields"]
         cc_phone = fields.get("CC Phone", "")
+        cc_name = fields.get("CC Name", "") or "CC"
         manager_ids = fields.get("Property Managers", [])
         print(f"[PM] Manager IDs: {manager_ids}")
         if not manager_ids:
-            return {"cc_phone": cc_phone}
+            return {"cc_phone": cc_phone, "cc_name": cc_name}
         mgr = table("Property Managers").get(manager_ids[0])
         f = mgr["fields"]
         email = (f.get("Email", "") or "").strip()
@@ -480,6 +483,7 @@ def _get_property_manager(property_name):
             "email": email,
             "phone": f.get("Phone", ""),
             "cc_phone": cc_phone,
+            "cc_name": cc_name,
         }
     except Exception as e:
         print(f"[PM] Lookup error: {e}")
@@ -548,7 +552,7 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
 
     cc_phone = manager.get("cc_phone", "")
     if cc_phone:
-        _send("CC", "", cc_phone, "CC")
+        _send(manager.get("cc_name", "") or "CC", "", cc_phone, "CC")
 
 
 if __name__ == "__main__":
