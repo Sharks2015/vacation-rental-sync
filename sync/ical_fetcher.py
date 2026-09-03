@@ -12,12 +12,14 @@ from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-# Airbnb uses this summary text for owner blocks / unavailable periods
+# Airbnb uses this summary text for owner blocks / unavailable periods;
+# Lodgify uses "Closed Period" for the same purpose.
 _BLOCK_PATTERNS = [
     r"Not available",
     r"Airbnb \(Not available\)",
     r"Owner Block",
     r"Blocked",
+    r"Closed Period",
 ]
 _BLOCK_RE = re.compile("|".join(_BLOCK_PATTERNS), re.IGNORECASE)
 
