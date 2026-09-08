@@ -1,7 +1,9 @@
 import os
 import re
+import secrets
 import threading
 from datetime import datetime
+from functools import wraps
 from zoneinfo import ZoneInfo
 
 _EMOJI_RE = re.compile(
@@ -29,7 +31,7 @@ import cloudinary.uploader
 from cloudinary.utils import cloudinary_url
 import requests
 from dotenv import load_dotenv
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request, send_from_directory, session
 from pyairtable import Api
 
 load_dotenv()
@@ -38,6 +40,10 @@ _ET = ZoneInfo("America/New_York")
 
 BASEDIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__, static_folder=BASEDIR, static_url_path="")
+# Falls back to a random key generated at process start if unset — sessions
+# just reset on the next redeploy in that case. Set FLASK_SECRET_KEY on
+# Render for a stable signing key across deploys.
+app.secret_key = os.getenv("FLASK_SECRET_KEY") or secrets.token_hex(32)
 
 _airtable = None
 
@@ -51,7 +57,21 @@ def table(name):
     return get_airtable().table(os.getenv("AIRTABLE_BASE_ID"), name)
 
 NOTIFY_EMAIL = os.getenv("NOTIFY_EMAIL", "hello@paradiseshinecleaning.com")
+OWNER_PHONE = os.getenv("OWNER_PHONE", "")
 GHL_WEBHOOK_URL = os.getenv("GHL_WEBHOOK_URL", "")
+
+
+def require_admin(fn):
+    """Protects owner-only routes with a real server-side session, set by a
+    successful /manager-verify. Replaces the old purely-client-side PIN gate,
+    which left these routes reachable with no auth at all if you hit the URL
+    directly."""
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not session.get("is_admin"):
+            return jsonify({"success": False, "error": "Not authenticated"}), 401
+        return fn(*args, **kwargs)
+    return wrapper
 
 cloudinary.config(
     cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME", ""),
@@ -174,8 +194,9 @@ def submit_report():
     photo_urls = _upload_photos(photos, property_name)
 
     # Save report to Airtable
+    record_id = None
     try:
-        _save_report(cleaner_name, property_name, fully_stocked,
+        record_id = _save_report(cleaner_name, property_name, fully_stocked,
                      supplies, damage_notes, smell_notes, stain_notes, photo_urls)
     except Exception as e:
         _last_save_error["msg"] = str(e)
@@ -184,6 +205,31 @@ def submit_report():
     # Send GHL webhook in background so response isn't delayed
     def _notify():
         manager = _get_property_manager(property_name)
+
+        if manager.get("requires_approval"):
+            # This client's reports are held for owner review — the property
+            # manager must NOT receive the raw cleaner submission. Mark the
+            # record pending and notify the owner only.
+            if not record_id:
+                print("[Approval] Report requires approval but has no record_id (save failed) — skipping")
+                return
+            try:
+                _mark_pending_review(record_id, fully_stocked, supplies,
+                                      damage_notes, smell_notes, stain_notes)
+            except Exception as e:
+                print(f"[Approval] Failed to mark pending review: {e}")
+                return
+            if GHL_WEBHOOK_URL:
+                flagged, _ = _build_flagged_and_notes(
+                    fully_stocked, supplies, damage_notes, smell_notes, stain_notes
+                )
+                try:
+                    _notify_owner_pending(cleaner_name, property_name, flagged)
+                except Exception as e:
+                    print(f"GHL owner-notify error: {e}")
+            return
+
+        # Not a gated client — unchanged behavior, sent immediately.
         if GHL_WEBHOOK_URL:
             try:
                 _forward_to_ghl(cleaner_name, property_name, fully_stocked,
@@ -291,10 +337,18 @@ def manager_verify():
         return jsonify({"success": False, "error": "Not configured"}), 500
     if pin != MANAGER_PIN:
         return jsonify({"success": False, "error": "Invalid PIN"}), 401
+    session["is_admin"] = True
+    return jsonify({"success": True})
+
+
+@app.route("/manager-logout", methods=["POST"])
+def manager_logout():
+    session.pop("is_admin", None)
     return jsonify({"success": True})
 
 
 @app.route("/manager-reports", methods=["GET"])
+@require_admin
 def manager_reports():
     try:
         records = table("Cleaning Reports").all()
@@ -317,10 +371,95 @@ def manager_reports():
                 "damage_notes": f.get("Damage Notes", ""),
                 "photo_count": f.get("Photo Count", 0),
                 "photo_urls": photo_urls,
+                "approval_status": f.get("Approval Status", ""),
             })
         return jsonify({"success": True, "reports": reports, "properties": sorted(properties)})
     except Exception as e:
         print(f"Manager reports error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/manager-pending-reports", methods=["GET"])
+@require_admin
+def manager_pending_reports():
+    try:
+        records = table("Cleaning Reports").all(formula="{Approval Status}='Pending Owner Review'")
+        reports = []
+        for r in sorted(records, key=lambda x: x["fields"].get("Submitted At", ""), reverse=True):
+            f = r["fields"]
+            photo_attachments = f.get("Photos", [])
+            photo_urls = [a.get("url", "") for a in photo_attachments if a.get("url")]
+            reports.append({
+                "id": r["id"],
+                "property": f.get("Property", ""),
+                "cleaner": f.get("Cleaner Name", ""),
+                "submitted_at": f.get("Submitted At", ""),
+                # What the cleaner actually submitted (never edited)
+                "original_fully_stocked": f.get("Fully Stocked", False),
+                "original_supplies_flagged": f.get("Supplies Flagged", ""),
+                "original_damage_notes": f.get("Damage Notes", ""),
+                # Editable — this is what gets sent once approved
+                "final_fully_stocked": f.get("Final Fully Stocked", f.get("Fully Stocked", False)),
+                "final_supplies_flagged": f.get("Final Supplies Flagged", ""),
+                "final_damage_notes": f.get("Final Damage Notes", ""),
+                "photo_urls": photo_urls,
+            })
+        return jsonify({"success": True, "reports": reports})
+    except Exception as e:
+        print(f"Manager pending-reports error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/manager-report/<record_id>/save-edit", methods=["POST"])
+@require_admin
+def manager_save_edit(record_id):
+    data = request.get_json() or {}
+    try:
+        table("Cleaning Reports").update(record_id, {
+            "Final Fully Stocked": bool(data.get("final_fully_stocked", False)),
+            "Final Supplies Flagged": data.get("final_supplies_flagged", ""),
+            "Final Damage Notes": data.get("final_damage_notes", ""),
+        })
+        return jsonify({"success": True})
+    except Exception as e:
+        print(f"[Approval] save-edit error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/manager-report/<record_id>/approve", methods=["POST"])
+@require_admin
+def manager_approve(record_id):
+    data = request.get_json() or {}
+    try:
+        # Persist any last-second edits sent along with the approve action,
+        # then re-read the record so the send step always uses whatever is
+        # actually stored — never stale in-memory request data.
+        if data:
+            table("Cleaning Reports").update(record_id, {
+                "Final Fully Stocked": bool(data.get("final_fully_stocked", False)),
+                "Final Supplies Flagged": data.get("final_supplies_flagged", ""),
+                "Final Damage Notes": data.get("final_damage_notes", ""),
+            })
+
+        rec = table("Cleaning Reports").get(record_id)
+        f = rec["fields"]
+        if f.get("Approval Status") != "Pending Owner Review":
+            return jsonify({"success": False, "error": "Report is not pending review"}), 400
+
+        property_name = f.get("Property", "")
+        manager = _get_property_manager(property_name)
+        if not GHL_WEBHOOK_URL:
+            return jsonify({"success": False, "error": "GHL_WEBHOOK_URL not configured"}), 500
+
+        _send_final_report_to_manager(rec, manager)
+
+        table("Cleaning Reports").update(record_id, {
+            "Approval Status": "Approved & Sent",
+            "Approved At": datetime.now(_ET).strftime("%Y-%m-%d %H:%M"),
+        })
+        return jsonify({"success": True})
+    except Exception as e:
+        print(f"[Approval] approve error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -434,7 +573,7 @@ def _shorten_url(url):
     return url
 
 
-def _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_notes, smell_notes, stain_notes, photo_urls):
+def _build_flagged_and_notes(fully_stocked, supplies, damage_notes, smell_notes, stain_notes):
     flagged = "" if fully_stocked else ", ".join(
         f"{SUPPLY_LABELS.get(k, k)}: {STATUS_LABELS.get(v, v)}"
         for k, v in supplies.items() if v
@@ -444,6 +583,13 @@ def _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_no
         f"Smell: {smell_notes}" if smell_notes else "",
         f"Stained Items:\n{stain_notes}" if stain_notes else "",
     ]))
+    return flagged, combined_notes
+
+
+def _save_report(cleaner_name, property_name, fully_stocked, supplies, damage_notes, smell_notes, stain_notes, photo_urls):
+    flagged, combined_notes = _build_flagged_and_notes(
+        fully_stocked, supplies, damage_notes, smell_notes, stain_notes
+    )
     record = {
         "Property": property_name,
         "Cleaner Name": cleaner_name,
@@ -481,13 +627,58 @@ def _get_property_manager(property_name):
         return {
             "name": f.get("Name", ""),
             "email": email,
-            "phone": f.get("Phone", ""),
+            "phone": f.get("Phone Number", ""),
             "cc_phone": cc_phone,
             "cc_name": cc_name,
+            "manager_id": mgr["id"],
+            "requires_approval": bool(f.get("Requires Owner Approval", False)),
         }
     except Exception as e:
         print(f"[PM] Lookup error: {e}")
         return {}
+
+
+def _mark_pending_review(record_id, fully_stocked, supplies, damage_notes, smell_notes, stain_notes):
+    """Copies the cleaner's submission into the editable Final fields and
+    marks the report Pending Owner Review. The Final fields are what
+    actually gets sent once approved — editing them before approval is how
+    corrections make it to the property manager instead of the original."""
+    flagged, combined_notes = _build_flagged_and_notes(
+        fully_stocked, supplies, damage_notes, smell_notes, stain_notes
+    )
+    table("Cleaning Reports").update(record_id, {
+        "Approval Status": "Pending Owner Review",
+        "Final Fully Stocked": fully_stocked,
+        "Final Supplies Flagged": flagged,
+        "Final Damage Notes": combined_notes,
+    })
+
+
+def _notify_owner_pending(cleaner_name, property_name, flagged_summary):
+    """Notifies the owner (never the property manager) that a report for a
+    gated client is waiting for review."""
+    now_et = datetime.now(_ET)
+    short_date = now_et.strftime("%m/%d %I:%M%p")
+    issue_line = flagged_summary if flagged_summary else "Fully stocked — no issues flagged"
+    body = (
+        f"Inventory report needs your review\n"
+        f"{property_name}\n"
+        f"Cleaner: {cleaner_name}\n"
+        f"{short_date}\n"
+        f"{issue_line}\n"
+        f"Open the Manager Dashboard to review and approve."
+    )
+    payload = {
+        "cleaner_name": cleaner_name,
+        "property_name": property_name,
+        "manager_name": "Danielle",
+        "manager_email": NOTIFY_EMAIL,
+        "manager_phone": OWNER_PHONE,
+        "notify_email": NOTIFY_EMAIL,
+        "report_body": body,
+    }
+    r = requests.post(GHL_WEBHOOK_URL, json=payload, timeout=10)
+    print(f"[GHL] owner pending-review notify → {r.status_code}")
 
 
 def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage_notes, smell_notes, stain_notes, manager, photo_urls):
@@ -547,6 +738,74 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
         if damage_body:
             r2 = requests.post(GHL_WEBHOOK_URL, json={**payload, "report_body": damage_body}, timeout=10)
             print(f"[GHL] {label} damage/photos → {r2.status_code}")
+
+    _send(manager.get("name", ""), manager.get("email", ""), manager.get("phone", ""), "primary")
+
+    cc_phone = manager.get("cc_phone", "")
+    if cc_phone:
+        _send(manager.get("cc_name", "") or "CC", "", cc_phone, "CC")
+
+
+def _send_final_report_to_manager(rec, manager):
+    """Sends the approved, possibly-corrected report to the property
+    manager — the only place a gated client's manager ever gets notified.
+    Sourced from the Airtable record's Final fields (whatever the owner last
+    approved/edited), not the original cleaner submission and not any
+    in-memory request data, since approval can happen long after submit."""
+    f = rec["fields"]
+    property_name = f.get("Property", "")
+    cleaner_name = f.get("Cleaner Name", "")
+    fully_stocked = f.get("Final Fully Stocked", f.get("Fully Stocked", False))
+    supplies_flagged = f.get("Final Supplies Flagged", "") or ""
+    damage_notes = f.get("Final Damage Notes", "") or ""
+    photo_attachments = f.get("Photos", [])
+    photo_urls = [a.get("url", "") for a in photo_attachments if a.get("url")]
+
+    now_et = datetime.now(_ET)
+    submitted_at = now_et.strftime("%B %d, %Y at %I:%M %p ET")
+    short_date = now_et.strftime("%m/%d %I:%M%p")
+
+    if fully_stocked:
+        supply_summary = "Fully stocked"
+        inventory_sms = "Stock: All Good"
+    else:
+        supply_summary = supplies_flagged or "No issues"
+        item_lines = "\n".join(f"• {item}" for item in supplies_flagged.split(", ")) if supplies_flagged else "• No issues"
+        inventory_sms = f"Stock: Low:\n{item_lines}"
+
+    summary_body = f"{short_date}\n{inventory_sms}\nSmell: None\nStains: None"
+
+    short_urls = [_shorten_url(url) for url in photo_urls] if photo_urls else []
+    photo_links = "\n".join(f"Photo {i+1}: {u}" for i, u in enumerate(short_urls))
+
+    damage_body = None
+    if damage_notes or short_urls:
+        parts = []
+        if damage_notes:
+            parts.append(f"Damage:\n{_sanitize_sms((_strip(damage_notes) or '')[:120])}")
+        if short_urls:
+            parts.append("Photos:\n" + "\n".join(u.replace("https://", "") for u in short_urls))
+        damage_body = "\n\n".join(parts)
+
+    base = {
+        "cleaner_name": cleaner_name,
+        "property_name": property_name,
+        "damage_notes": damage_notes,
+        "smell_notes": "",
+        "supplies_summary": supply_summary,
+        "photo_links": photo_links or "No photos",
+        "photo_count": len(photo_urls),
+        "submitted_at": submitted_at,
+        "notify_email": NOTIFY_EMAIL,
+    }
+
+    def _send(name, email, phone, label):
+        payload = {**base, "manager_name": name, "manager_email": email, "manager_phone": phone}
+        r = requests.post(GHL_WEBHOOK_URL, json={**payload, "report_body": summary_body}, timeout=10)
+        print(f"[GHL] approved {label} summary → {r.status_code} | phone={phone}")
+        if damage_body:
+            r2 = requests.post(GHL_WEBHOOK_URL, json={**payload, "report_body": damage_body}, timeout=10)
+            print(f"[GHL] approved {label} damage/photos → {r2.status_code}")
 
     _send(manager.get("name", ""), manager.get("email", ""), manager.get("phone", ""), "primary")
 

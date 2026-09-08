@@ -238,6 +238,139 @@
     .empty-state .icon { font-size: 40px; margin-bottom: 10px; }
     .loading { text-align: center; padding: 60px; color: #9CA3AF; font-size: 14px; }
 
+    /* TABS */
+    .tab-bar {
+      background: white;
+      border-bottom: 1px solid #E5E7EB;
+      display: flex;
+      gap: 4px;
+      padding: 0 24px;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      padding: 14px 4px;
+      margin-right: 24px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #9CA3AF;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tab-btn.active { color: #1B3A6B; border-bottom-color: #1B3A6B; }
+    .tab-badge {
+      background: #F59E0B;
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 20px;
+    }
+    .tab-badge:empty, .tab-badge.zero { display: none; }
+
+    /* PENDING REVIEW CARDS */
+    .pending-card {
+      background: white;
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+      border-left: 4px solid #F59E0B;
+    }
+    .btn-review {
+      margin-top: 10px;
+      padding: 9px 16px;
+      background: #1B3A6B;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-review:hover { background: #152d54; }
+
+    /* REVIEW MODAL */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.55);
+      z-index: 100;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 24px 16px;
+      overflow-y: auto;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-card {
+      background: white;
+      border-radius: 16px;
+      max-width: 480px;
+      width: 100%;
+      padding: 24px;
+      margin: auto;
+    }
+    .modal-card h2 { color: #1B3A6B; font-size: 18px; margin-bottom: 2px; }
+    .modal-sub { color: #9CA3AF; font-size: 13px; margin-bottom: 18px; }
+    .modal-field { margin-bottom: 16px; }
+    .modal-field label { display: block; font-size: 12px; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
+    .modal-readonly { background: #F9FAFB; border-radius: 8px; padding: 10px 12px; font-size: 13px; color: #374151; white-space: pre-wrap; }
+    .modal-field textarea {
+      width: 100%;
+      min-height: 70px;
+      padding: 10px 12px;
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: inherit;
+      resize: vertical;
+      outline: none;
+    }
+    .modal-field textarea:focus { border-color: #1B3A6B; }
+    .modal-checkbox { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #374151; }
+    .modal-photos { display: flex; flex-wrap: wrap; gap: 8px; }
+    .modal-photos img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid #E5E7EB; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-save-edit {
+      flex: 1;
+      padding: 12px;
+      background: white;
+      color: #1B3A6B;
+      border: 2px solid #1B3A6B;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-approve {
+      flex: 1;
+      padding: 12px;
+      background: #059669;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .btn-approve:disabled, .btn-save-edit:disabled { opacity: 0.5; cursor: default; }
+    .btn-close-modal {
+      display: block;
+      margin: 12px auto 0;
+      background: none;
+      border: none;
+      color: #9CA3AF;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .modal-status { text-align: center; font-size: 13px; margin-top: 10px; min-height: 18px; }
+    .modal-status.error { color: #B91C1C; }
+    .modal-status.ok { color: #059669; }
+
     @media (max-width: 600px) {
       .stats-bar { gap: 0; }
       .stat-value { font-size: 22px; }
@@ -271,6 +404,14 @@
     <button class="btn-logout" onclick="logout()">Sign Out</button>
   </header>
 
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tab-all" onclick="switchTab('all')">All Reports</button>
+    <button class="tab-btn" id="tab-pending" onclick="switchTab('pending')">
+      Pending Approval <span class="tab-badge zero" id="pending-badge"></span>
+    </button>
+  </div>
+
+  <div id="all-reports-view">
   <div class="stats-bar">
     <div class="stat">
       <div class="stat-value" id="stat-total">—</div>
@@ -324,6 +465,57 @@
     </div>
     <div id="reports-list"><div class="loading">Loading reports...</div></div>
   </div>
+  </div>
+
+  <div id="pending-view" style="display:none">
+    <div class="reports-container">
+      <div class="reports-meta">
+        <div id="pending-count" class="reports-count"></div>
+        <button class="refresh-btn" onclick="loadPending()">↻ Refresh</button>
+      </div>
+      <div id="pending-list"><div class="loading">Loading…</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="review-modal">
+  <div class="modal-card">
+    <h2 id="modal-property">—</h2>
+    <p class="modal-sub" id="modal-meta">—</p>
+
+    <div class="modal-field">
+      <label>Cleaner Submitted</label>
+      <div class="modal-readonly" id="modal-original"></div>
+    </div>
+
+    <div class="modal-field" id="modal-photos-field" style="display:none">
+      <label>Photos</label>
+      <div class="modal-photos" id="modal-photos"></div>
+    </div>
+
+    <div class="modal-field">
+      <label class="modal-checkbox">
+        <input type="checkbox" id="modal-fully-stocked"> Fully Stocked (no supply issues)
+      </label>
+    </div>
+
+    <div class="modal-field">
+      <label>Items / Status (edit as needed — this is what gets sent)</label>
+      <textarea id="modal-supplies"></textarea>
+    </div>
+
+    <div class="modal-field">
+      <label>Notes (damage / smell / stains — edit as needed)</label>
+      <textarea id="modal-notes"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-save-edit" id="modal-save-btn" onclick="saveEdit()">Save Changes</button>
+      <button class="btn-approve" id="modal-approve-btn" onclick="approveReport()">Approve &amp; Send</button>
+    </div>
+    <div class="modal-status" id="modal-status"></div>
+    <button class="btn-close-modal" onclick="closeModal()">Close</button>
+  </div>
 </div>
 
 <script>
@@ -349,6 +541,7 @@ async function login() {
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('dashboard-screen').style.display = 'block';
       loadReports();
+      loadPending();
     } else {
       errEl.textContent = 'Invalid PIN. Try again.';
       document.getElementById('pin-input').value = '';
@@ -359,17 +552,175 @@ async function login() {
 }
 
 function logout() {
+  fetch('/manager-logout', { method: 'POST' }).catch(() => {});
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('dashboard-screen').style.display = 'none';
   document.getElementById('pin-input').value = '';
   document.getElementById('login-error').textContent = '';
   allReports = [];
+  allPending = [];
+}
+
+function switchTab(tab) {
+  document.getElementById('tab-all').classList.toggle('active', tab === 'all');
+  document.getElementById('tab-pending').classList.toggle('active', tab === 'pending');
+  document.getElementById('all-reports-view').style.display = tab === 'all' ? '' : 'none';
+  document.getElementById('pending-view').style.display = tab === 'pending' ? '' : 'none';
+}
+
+let allPending = [];
+
+async function loadPending() {
+  document.getElementById('pending-list').innerHTML = '<div class="loading">Loading…</div>';
+  try {
+    const res = await fetch('/manager-pending-reports');
+    if (res.status === 401) { logout(); return; }
+    const data = await res.json();
+    if (!data.success) {
+      document.getElementById('pending-list').innerHTML = '<div class="loading">Failed to load.</div>';
+      return;
+    }
+    allPending = data.reports;
+    const badge = document.getElementById('pending-badge');
+    badge.textContent = allPending.length || '';
+    badge.classList.toggle('zero', allPending.length === 0);
+    renderPending();
+  } catch {
+    document.getElementById('pending-list').innerHTML = '<div class="loading">Error loading.</div>';
+  }
+}
+
+function renderPending() {
+  document.getElementById('pending-count').textContent =
+    `${allPending.length} awaiting approval`;
+
+  if (!allPending.length) {
+    document.getElementById('pending-list').innerHTML =
+      '<div class="empty-state"><div class="icon">✅</div><p>Nothing waiting for review</p></div>';
+    return;
+  }
+
+  document.getElementById('pending-list').innerHTML = allPending.map(r => `
+    <div class="pending-card">
+      <div class="card-top">
+        <div>
+          <div class="property-name">${r.property || '—'}</div>
+          <div class="cleaner-line">${r.cleaner || '—'}</div>
+        </div>
+        <div class="submitted-at">${fmtDate(r.submitted_at)}</div>
+      </div>
+      <div class="supply-row">${r.original_fully_stocked
+        ? '<span class="fully-stocked-tag">Fully Stocked</span>'
+        : `<div class="modal-readonly" style="margin-top:4px">${(r.original_supplies_flagged || 'No issues').replace(/</g,'&lt;')}</div>`}</div>
+      <button class="btn-review" onclick="openReviewModal('${r.id}')">Review Report</button>
+    </div>
+  `).join('');
+}
+
+function openReviewModal(id) {
+  const r = allPending.find(x => x.id === id);
+  if (!r) return;
+  document.getElementById('review-modal').dataset.recordId = id;
+  document.getElementById('modal-property').textContent = r.property || '—';
+  document.getElementById('modal-meta').textContent = `${r.cleaner || '—'} · ${fmtDate(r.submitted_at)}`;
+
+  const originalLines = [];
+  originalLines.push(r.original_fully_stocked ? 'Fully Stocked' : (r.original_supplies_flagged || 'No issues flagged'));
+  if (r.original_damage_notes) originalLines.push('\n' + r.original_damage_notes);
+  document.getElementById('modal-original').textContent = originalLines.join('\n');
+
+  const photosField = document.getElementById('modal-photos-field');
+  const photosEl = document.getElementById('modal-photos');
+  if (r.photo_urls && r.photo_urls.length) {
+    photosField.style.display = '';
+    photosEl.innerHTML = r.photo_urls.map(u => `<a href="${u}" target="_blank"><img src="${u}"></a>`).join('');
+  } else {
+    photosField.style.display = 'none';
+  }
+
+  document.getElementById('modal-fully-stocked').checked = !!r.final_fully_stocked;
+  document.getElementById('modal-supplies').value = r.final_supplies_flagged || '';
+  document.getElementById('modal-notes').value = r.final_damage_notes || '';
+  document.getElementById('modal-status').textContent = '';
+  document.getElementById('modal-status').className = 'modal-status';
+  document.getElementById('review-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('review-modal').classList.remove('open');
+}
+
+function currentEditPayload() {
+  return {
+    final_fully_stocked: document.getElementById('modal-fully-stocked').checked,
+    final_supplies_flagged: document.getElementById('modal-supplies').value,
+    final_damage_notes: document.getElementById('modal-notes').value,
+  };
+}
+
+async function saveEdit() {
+  const id = document.getElementById('review-modal').dataset.recordId;
+  const statusEl = document.getElementById('modal-status');
+  statusEl.textContent = 'Saving…';
+  statusEl.className = 'modal-status';
+  try {
+    const res = await fetch(`/manager-report/${id}/save-edit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(currentEditPayload()),
+    });
+    if (res.status === 401) { logout(); return; }
+    const data = await res.json();
+    if (data.success) {
+      statusEl.textContent = 'Saved.';
+      statusEl.className = 'modal-status ok';
+    } else {
+      statusEl.textContent = data.error || 'Failed to save.';
+      statusEl.className = 'modal-status error';
+    }
+  } catch {
+    statusEl.textContent = 'Connection error.';
+    statusEl.className = 'modal-status error';
+  }
+}
+
+async function approveReport() {
+  const id = document.getElementById('review-modal').dataset.recordId;
+  const statusEl = document.getElementById('modal-status');
+  const approveBtn = document.getElementById('modal-approve-btn');
+  if (!confirm('Send this approved report to the property manager now?')) return;
+  statusEl.textContent = 'Sending…';
+  statusEl.className = 'modal-status';
+  approveBtn.disabled = true;
+  try {
+    const res = await fetch(`/manager-report/${id}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(currentEditPayload()),
+    });
+    if (res.status === 401) { logout(); return; }
+    const data = await res.json();
+    if (data.success) {
+      statusEl.textContent = 'Approved and sent.';
+      statusEl.className = 'modal-status ok';
+      setTimeout(() => { closeModal(); loadPending(); }, 900);
+    } else {
+      statusEl.textContent = data.error || 'Failed to send.';
+      statusEl.className = 'modal-status error';
+    }
+  } catch {
+    statusEl.textContent = 'Connection error.';
+    statusEl.className = 'modal-status error';
+  } finally {
+    approveBtn.disabled = false;
+  }
 }
 
 async function loadReports() {
   document.getElementById('reports-list').innerHTML = '<div class="loading">Loading reports...</div>';
   try {
     const res = await fetch('/manager-reports');
+    if (res.status === 401) { logout(); return; }
     const data = await res.json();
     if (!data.success) {
       document.getElementById('reports-list').innerHTML = '<div class="loading">Failed to load reports.</div>';
