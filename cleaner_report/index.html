@@ -1391,15 +1391,46 @@ document.getElementById('btn-new-report').addEventListener('click', () => showSc
 
 // ── Service Worker ──
 if ('serviceWorker' in navigator) {
+  let pendingReload = false;
+
+  // Never reload out from under a cleaner who is filling in a report —
+  // that would throw away their counts and photos.
+  const midReport = () => {
+    const el = document.getElementById('screen-report');
+    return !!(el && el.classList.contains('active'));
+  };
+
+  const applyUpdate = () => {
+    if (midReport()) { pendingReload = true; return; }
+    window.location.reload();
+  };
+
+  // Once they finish or back out of a report, pick up the waiting version.
+  const _showScreen = window.showScreen;
+  window.showScreen = function (id) {
+    _showScreen(id);
+    if (pendingReload && (id === 'screen-pin' || id === 'screen-properties')) {
+      window.location.reload();
+    }
+  };
+
   navigator.serviceWorker.register('/sw.js').then(reg => {
     reg.addEventListener('updatefound', () => {
       const newWorker = reg.installing;
+      if (!newWorker) return;
       newWorker.addEventListener('statechange', () => {
         if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
-          window.location.reload();
+          applyUpdate();
         }
       });
     });
+    // Look for a new version each time the app is reopened or refocused.
+    const check = () => {
+      if (document.visibilityState === 'visible') reg.update().catch(() => {});
+    };
+    document.addEventListener('visibilitychange', check);
+    window.addEventListener('focus', check);
+    setInterval(check, 30 * 60 * 1000);
   }).catch(() => {});
 }
 </script>
