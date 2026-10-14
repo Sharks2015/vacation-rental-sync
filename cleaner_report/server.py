@@ -2,6 +2,7 @@ import os
 import re
 import secrets
 import threading
+import unicodedata
 from datetime import datetime
 from functools import wraps
 from zoneinfo import ZoneInfo
@@ -563,6 +564,58 @@ def _sanitize_sms(text):
     return _CARRIER_BLOCKED.sub("substance", text) if text else text
 
 
+# The GHL workflow wraps each report_body in its own greeting ("Hi <PM>, a
+# cleaning report was just submitted for <property> by <cleaner>"), ~130 chars.
+# Carriers reject long multi-segment texts (Twilio 30019), so each body stays
+# under SMS_BODY_LIMIT and ASCII-only: one accent or bullet switches the whole
+# text to UCS-2, which cuts every segment from 160 to 70 characters.
+SMS_BODY_LIMIT = 180
+
+
+def _sms_ascii(text):
+    if not text:
+        return text
+    text = text.replace("•", "-").replace("—", "-").replace("–", "-")
+    text = text.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"')
+    text = unicodedata.normalize("NFKD", text)
+    return "".join(c for c in text if not unicodedata.combining(c)).encode("ascii", "ignore").decode()
+
+
+def _sms_stock_line(flagged):
+    """flagged: [(label, status)] → 'Low: A, B. Out: C' on one line."""
+    low = [label for label, status in flagged if status != STATUS_LABELS["completely_out"]]
+    out = [label for label, status in flagged if status == STATUS_LABELS["completely_out"]]
+    parts = []
+    if low:
+        parts.append("Low: " + ", ".join(low))
+    if out:
+        parts.append("Out: " + ", ".join(out))
+    return ". ".join(parts) or "No issues"
+
+
+def _pack_sms(lines, limit=SMS_BODY_LIMIT):
+    """Greedily packs lines into as few bodies as possible, each <= limit.
+    A single over-long line is split on ', ' (supply lists) or hard-wrapped."""
+    bodies, current = [], ""
+    for line in (_sms_ascii(l) for l in lines if l):
+        while line:
+            room = limit - len(current) - (1 if current else 0)
+            if len(line) <= room:
+                current = f"{current}\n{line}" if current else line
+                break
+            cut = line.rfind(", ", 0, room)
+            if cut > 0:
+                head, line = line[:cut], line[cut + 2:]
+                current = f"{current}\n{head}" if current else head
+            elif not current:
+                current, line = line[:limit], line[limit:]
+            bodies.append(current)
+            current = ""
+    if current:
+        bodies.append(current)
+    return bodies
+
+
 def _shorten_url(url):
     try:
         r = requests.get(f"https://tinyurl.com/api-create.php?url={requests.utils.quote(url, safe='')}", timeout=5)
@@ -698,30 +751,25 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
     short_urls = [_shorten_url(url) for url in photo_urls] if photo_urls else []
     photo_links = "\n".join(f"Photo {i+1}: {u}" for i, u in enumerate(short_urls))
 
-    # SMS 1: date + full inventory list + smell (always sent)
-    if fully_stocked:
-        inventory_sms = "Stock: All Good"
-    else:
-        item_lines = "\n".join(f"• {label}: {status}" for label, status in flagged) if flagged else "• No issues"
-        inventory_sms = f"Stock: Low:\n{item_lines}"
-
+    # SMS 1: date + inventory + smell (always sent)
+    stock_sms = "Stock: All Good" if fully_stocked else f"Stock: {_sms_stock_line(flagged)}"
     smell_sms = f"Smell: {_sanitize_sms((_strip(smell_notes) or '')[:80])}" if smell_notes else "Smell: None"
-    stain_sms = f"Stains: {stain_notes[:100]}" if stain_notes else "Stains: None"
-    summary_body = f"{short_date}\n{inventory_sms}\n{smell_sms}\n{stain_sms}"
+    summary_bodies = _pack_sms([short_date, stock_sms, smell_sms, "" if stain_notes else "Stains: None"])
 
-    # SMS 2: damage notes + photos — only sent if damage or photos exist
-    damage_body = None
-    if damage_notes or short_urls:
-        parts = []
-        if damage_notes:
-            parts.append(f"Damage:\n{_sanitize_sms((_strip(damage_notes) or '')[:120])}")
-        if short_urls:
-            parts.append("Photos:\n" + "\n".join(u.replace("https://", "") for u in short_urls))
-        damage_body = "\n\n".join(parts)
+    # SMS 2: stains, damage notes + photos — only sent if any exist
+    extra_lines = []
+    if stain_notes:
+        extra_lines.append(f"Stains: {_sanitize_sms(stain_notes[:100])}")
+    if damage_notes:
+        extra_lines.append(f"Damage: {_sanitize_sms((_strip(damage_notes) or '')[:120])}")
+    if short_urls:
+        extra_lines.append("Photos:")
+        extra_lines.extend(u.replace("https://", "") for u in short_urls)
+    extra_bodies = _pack_sms(extra_lines)
 
     base = {
-        "cleaner_name": cleaner_name,
-        "property_name": property_name,
+        "cleaner_name": _sms_ascii(cleaner_name),
+        "property_name": _sms_ascii(property_name),
         "damage_notes": damage_notes,
         "smell_notes": smell_notes,
         "supplies_summary": supply_summary,
@@ -733,11 +781,9 @@ def _forward_to_ghl(cleaner_name, property_name, fully_stocked, supplies, damage
 
     def _send(name, email, phone, label):
         payload = {**base, "manager_name": name, "manager_email": email, "manager_phone": phone}
-        r = requests.post(GHL_WEBHOOK_URL, json={**payload, "report_body": summary_body}, timeout=10)
-        print(f"[GHL] {label} summary → {r.status_code} | phone={phone}")
-        if damage_body:
-            r2 = requests.post(GHL_WEBHOOK_URL, json={**payload, "report_body": damage_body}, timeout=10)
-            print(f"[GHL] {label} damage/photos → {r2.status_code}")
+        for i, body in enumerate(summary_bodies + extra_bodies):
+            r = requests.post(GHL_WEBHOOK_URL, json={**payload, "report_body": body}, timeout=10)
+            print(f"[GHL] {label} sms {i + 1} ({len(body)} chars) → {r.status_code} | phone={phone}")
 
     _send(manager.get("name", ""), manager.get("email", ""), manager.get("phone", ""), "primary")
 
@@ -767,29 +813,29 @@ def _send_final_report_to_manager(rec, manager):
 
     if fully_stocked:
         supply_summary = "Fully stocked"
-        inventory_sms = "Stock: All Good"
+        stock_sms = "Stock: All Good"
     else:
         supply_summary = supplies_flagged or "No issues"
-        item_lines = "\n".join(f"• {item}" for item in supplies_flagged.split(", ")) if supplies_flagged else "• No issues"
-        inventory_sms = f"Stock: Low:\n{item_lines}"
+        flagged = [tuple(item.rsplit(": ", 1)) if ": " in item else (item, "Running Low")
+                   for item in supplies_flagged.split(", ") if item]
+        stock_sms = f"Stock: {_sms_stock_line(flagged)}"
 
-    summary_body = f"{short_date}\n{inventory_sms}\nSmell: None\nStains: None"
+    summary_bodies = _pack_sms([short_date, stock_sms, "Smell: None", "Stains: None"])
 
     short_urls = [_shorten_url(url) for url in photo_urls] if photo_urls else []
     photo_links = "\n".join(f"Photo {i+1}: {u}" for i, u in enumerate(short_urls))
 
-    damage_body = None
-    if damage_notes or short_urls:
-        parts = []
-        if damage_notes:
-            parts.append(f"Damage:\n{_sanitize_sms((_strip(damage_notes) or '')[:120])}")
-        if short_urls:
-            parts.append("Photos:\n" + "\n".join(u.replace("https://", "") for u in short_urls))
-        damage_body = "\n\n".join(parts)
+    extra_lines = []
+    if damage_notes:
+        extra_lines.append(f"Damage: {_sanitize_sms((_strip(damage_notes) or '')[:120])}")
+    if short_urls:
+        extra_lines.append("Photos:")
+        extra_lines.extend(u.replace("https://", "") for u in short_urls)
+    extra_bodies = _pack_sms(extra_lines)
 
     base = {
-        "cleaner_name": cleaner_name,
-        "property_name": property_name,
+        "cleaner_name": _sms_ascii(cleaner_name),
+        "property_name": _sms_ascii(property_name),
         "damage_notes": damage_notes,
         "smell_notes": "",
         "supplies_summary": supply_summary,
@@ -801,11 +847,9 @@ def _send_final_report_to_manager(rec, manager):
 
     def _send(name, email, phone, label):
         payload = {**base, "manager_name": name, "manager_email": email, "manager_phone": phone}
-        r = requests.post(GHL_WEBHOOK_URL, json={**payload, "report_body": summary_body}, timeout=10)
-        print(f"[GHL] approved {label} summary → {r.status_code} | phone={phone}")
-        if damage_body:
-            r2 = requests.post(GHL_WEBHOOK_URL, json={**payload, "report_body": damage_body}, timeout=10)
-            print(f"[GHL] approved {label} damage/photos → {r2.status_code}")
+        for i, body in enumerate(summary_bodies + extra_bodies):
+            r = requests.post(GHL_WEBHOOK_URL, json={**payload, "report_body": body}, timeout=10)
+            print(f"[GHL] approved {label} sms {i + 1} ({len(body)} chars) → {r.status_code} | phone={phone}")
 
     _send(manager.get("name", ""), manager.get("email", ""), manager.get("phone", ""), "primary")
 
